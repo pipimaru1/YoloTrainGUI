@@ -229,50 +229,6 @@ static void LoadMRUToCombo(HWND hCombo, const std::wstring& section)
 // ------------------------------
 // ToolTip
 // ------------------------------
-static HWND g_hToolTip = nullptr;
-static std::wstring g_tipTempText;
-
-static bool AddTooltipForCtrl(HWND hDlg, int ctrlId, const std::wstring& text)
-{
-    HWND hCtrl = GetDlgItem(hDlg, ctrlId);
-    if (!hCtrl) {
-        AppendLog(L"[TIP] GetDlgItem failed: id=" + std::to_wstring(ctrlId));
-        return false;
-    }
-
-    if (!g_hToolTip) {
-        g_hToolTip = CreateWindowExW(
-            WS_EX_TOPMOST, TOOLTIPS_CLASSW, nullptr,
-            WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
-            CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-            hDlg, nullptr, g_hInst, nullptr);
-        if (!g_hToolTip) {
-            AppendLog(L"[TIP] Create tooltip failed.");
-            return false;
-        }
-        SendMessageW(g_hToolTip, TTM_SETMAXTIPWIDTH, 0, 400);
-        SetWindowPos(g_hToolTip, HWND_TOPMOST, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-        // 念のため有効化
-        SendMessageW(g_hToolTip, TTM_ACTIVATE, TRUE, 0);
-    }
-
-    static TOOLINFOW ti{};
-    ti = {}; // 毎回クリア
-    ti.cbSize = sizeof(ti);
-    ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
-    ti.hwnd = hDlg;
-    ti.uId = (UINT_PTR)hCtrl;
-    ti.lpszText = (LPWSTR)text.c_str();
-    ti.hinst = g_hInst;
-
-    LRESULT ok = SendMessageW(g_hToolTip, TTM_ADDTOOL, 0, (LPARAM)&ti);
-    if (!ok) {
-        AppendLog(L"[TIP] TTM_ADDTOOL failed (id=" + std::to_wstring(ctrlId) + L")");
-        return false;
-    }
-    return true;
-}
 
 // ------------------------------
 // Command history
@@ -815,8 +771,6 @@ static void InitDialog(HWND hDlg)
 
 	// ボタンにツールチップを追加
     // Temp構成ツリー（英語表記は適宜変えてください）
-    g_tipTempText = L"TEST";
-
     //g_tipTempText =
     //    L"Temp dir\r\n"
     //    L"├─ source\r\n"
@@ -828,8 +782,6 @@ static void InitDialog(HWND hDlg)
     //    L"└─ valid\r\n"
     //    L"    ├─ images\r\n"
     //    L"    └─ labels";
-
-    AddTooltipForCtrl(hDlg, IDC_STC_TEMP, g_tipTempText);
 
     // ついでに、コンボ自体にも同じツールチップを付けたい場合：
     // AddTooltipForCtrl(hDlg, IDC_COMBO_TEMP, g_tipTempText);
@@ -962,6 +914,8 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
         case IDC_BTN_TRAIN:
             std::thread([]() { DoTrain(); }).detach();
             break;
+
+        
 
         case IDC_BTN_STOP:
             StopChild();
