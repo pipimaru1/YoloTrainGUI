@@ -54,3 +54,6 @@
 // Progress & Log
 #define IDC_PROGRESS                    1060
 #define IDC_LOG                         1070
+
+// tooltips
+#define IDC_STC_TEMP					1073

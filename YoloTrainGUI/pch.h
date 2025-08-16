@@ -36,4 +36,8 @@
 #include <richedit.h>
 #include <richole.h>
 
+#include <commctrl.h>
+#include <shellapi.h>
+#include <richedit.h>
+#include <richole.h>
 #endif //PCH_H
