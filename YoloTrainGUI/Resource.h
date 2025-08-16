@@ -44,7 +44,7 @@
 #define IDC_EDIT_IMGSZ                  1042
 #define IDC_EDIT_DEVICE                 1043
 #define IDC_CHK_CACHE                   1044
-#define IDC_EDIT_NAME                   1045
+#define IDC_COMBO_NAME                   1045
 #define IDC_EDIT_PROJECT                1046
 
 // Run

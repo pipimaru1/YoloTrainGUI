@@ -597,7 +597,7 @@ static void DoTrain()
     if (!weights.empty()) ss << L" --weights " << Quote(weights);
     if (IsDlgButtonChecked(g_hDlg, IDC_CHK_CACHE) == BST_CHECKED) ss << L" --cache";
 
-    std::wstring _NAME = GetText(g_hDlg, IDC_EDIT_NAME);
+    std::wstring _NAME = GetText(g_hDlg, IDC_COMBO_NAME);
     if (!_NAME.empty()) ss << L" --name " << Quote(_NAME);
 
     std::wstring project = GetText(g_hDlg, IDC_EDIT_PROJECT);
@@ -642,7 +642,7 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
     SaveMRU(L"Python.exe", GetText(hDlg, IDC_COMBO_PYTHON));
     SaveMRU(L"Environment", GetText(hDlg, IDC_COMBO_ACTIVATE));
 
-    SaveMRU(L"Name", GetText(hDlg, IDC_EDIT_NAME));
+    SaveMRU(L"Name", GetText(hDlg, IDC_COMBO_NAME));
 
     // 学習オプション
     SaveMRU(L"epochs", GetText(hDlg, IDC_EDIT_EPOCHS));
@@ -650,7 +650,7 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
     SaveMRU(L"imgsz", GetText(hDlg, IDC_EDIT_IMGSZ));
     SaveMRU(L"device", GetText(hDlg, IDC_EDIT_DEVICE));
     
-    //SaveMRU(L"name", GetText(hDlg, IDC_EDIT_NAME));
+    //SaveMRU(L"name", GetText(hDlg, IDC_COMBO_NAME));
     SaveMRU(L"project", GetText(hDlg, IDC_EDIT_PROJECT));
 
     // チェックボックスは "1" / "0" を保存
@@ -726,7 +726,7 @@ static void InitDialog(HWND hDlg)
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_PYTHON), L"Python.exe");
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), L"Environment");
 
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_EDIT_NAME), L"Name");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_NAME), L"Name");
 
 #endif
 
@@ -743,7 +743,7 @@ static void InitDialog(HWND hDlg)
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_PYTHON));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE));
 
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_EDIT_NAME));
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
 
     // 規定値
     SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
