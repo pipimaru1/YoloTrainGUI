@@ -584,13 +584,13 @@ static void DoTrain()
     ss << Quote(python) << L" " << Quote(trainpy)
         << L" --data " << Quote(datayaml);
 
-    std::wstring epochs = GetText(g_hDlg, IDC_EDIT_EPOCHS);
+    std::wstring epochs = GetText(g_hDlg, IDC_COMBO_EPOCHS);
     if (!epochs.empty()) ss << L" --epochs " << epochs;
-    std::wstring batch = GetText(g_hDlg, IDC_EDIT_BATCH);
+    std::wstring batch = GetText(g_hDlg, IDC_COMBO_BATCHSIZE);
     if (!batch.empty()) ss << L" --batch " << batch;
-    std::wstring imgsz = GetText(g_hDlg, IDC_EDIT_IMGSZ);
+    std::wstring imgsz = GetText(g_hDlg, IDC_COMBO_IMGSZ);
     if (!imgsz.empty()) ss << L" --img " << imgsz;
-    std::wstring device = GetText(g_hDlg, IDC_EDIT_DEVICE);
+    std::wstring device = GetText(g_hDlg, IDC_COMBO_DEVICE);
     if (!device.empty()) ss << L" --device " << device;
     if (!hypyaml.empty()) ss << L" --hyp " << Quote(hypyaml);
     if (!cfgyaml.empty()) ss << L" --cfg " << Quote(cfgyaml);
@@ -645,10 +645,10 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
     SaveMRU(L"Name", GetText(hDlg, IDC_COMBO_NAME));
 
     // 学習オプション
-    SaveMRU(L"epochs", GetText(hDlg, IDC_EDIT_EPOCHS));
-    SaveMRU(L"batch", GetText(hDlg, IDC_EDIT_BATCH));
-    SaveMRU(L"imgsz", GetText(hDlg, IDC_EDIT_IMGSZ));
-    SaveMRU(L"device", GetText(hDlg, IDC_EDIT_DEVICE));
+    SaveMRU(L"epochs", GetText(hDlg, IDC_COMBO_EPOCHS));
+    SaveMRU(L"batch", GetText(hDlg, IDC_COMBO_BATCHSIZE));
+    SaveMRU(L"imgsz", GetText(hDlg, IDC_COMBO_IMGSZ));
+    SaveMRU(L"device", GetText(hDlg, IDC_COMBO_DEVICE));
     
     //SaveMRU(L"name", GetText(hDlg, IDC_COMBO_NAME));
     SaveMRU(L"project", GetText(hDlg, IDC_EDIT_PROJECT));
@@ -726,7 +726,11 @@ static void InitDialog(HWND hDlg)
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_PYTHON), L"Python.exe");
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), L"Environment");
 
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_NAME), L"Name");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_NAME),        L"Name");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_EPOCHS),      L"epochs");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_BATCHSIZE),   L"batch");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_IMGSZ),       L"imgsz");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_DEVICE),      L"device");
 
 #endif
 
@@ -743,14 +747,21 @@ static void InitDialog(HWND hDlg)
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_PYTHON));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE));
 
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
 
     // 規定値
     SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
     SetDlgItemTextW(hDlg, IDC_EDIT_REDUCTION, L"1.0");
-    SetDlgItemTextW(hDlg, IDC_EDIT_EPOCHS, L"100");
-    SetDlgItemTextW(hDlg, IDC_EDIT_BATCH, L"16");
-    SetDlgItemTextW(hDlg, IDC_EDIT_IMGSZ, L"640");
+
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_EPOCHS));
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_BATCHSIZE));
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMGSZ));
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_DEVICE));
+
+    //SetDlgItemTextW(hDlg, IDC_COMBO_EPOCHS, L"100");
+    //SetDlgItemTextW(hDlg, IDC_COMBO_BATCHSIZE, L"16");
+    //SetDlgItemTextW(hDlg, IDC_COMBO_IMGSZ, L"640");
+
     CheckDlgButton(hDlg, IDC_CHK_CACHE, BST_UNCHECKED);
 }
 
