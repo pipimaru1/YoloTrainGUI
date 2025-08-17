@@ -8,9 +8,10 @@
 #pragma comment(lib, "Uuid.lib")
 #pragma comment(lib, "Comctl32.lib")
 
+
 #include "resource.h"
 #include "YoloTrainGUI.h"
-
+#include "Tooltip.hpp"
 
 namespace fs = std::filesystem;
 static std::mutex g_storeMutex;
@@ -18,11 +19,30 @@ static std::mutex g_storeMutex;
 // ------------------------------
 // Globals
 // ------------------------------
-HINSTANCE g_hInst = nullptr;
 HWND g_hDlg = nullptr;
 std::atomic<HANDLE> g_hChildProc(nullptr);
 std::mutex g_logMutex;
 std::wstring g_logBuffer;
+
+const wchar_t *RET = L"\r\n";
+static TOOLINFOW g_TipTI{};
+static bool      bTmpTipShow = false;
+
+// ツールチップ
+Tooltip ttTmpDir; // グローバルなツールチップオブジェクト
+
+static std::wstring g_tipTempText =
+L"Temp dir\r\n"
+L"├─ source\r\n"
+L"│   ├─ images (from shared)\r\n"
+L"│   └─ labels (from shared)\r\n"
+L"├─ train\r\n"
+L"│   ├─ images\r\n"
+L"│   └─ labels\r\n"
+L"└─ valid\r\n"
+L"    ├─ images\r\n"
+L"    └─ labels";
+
 
 // ------------------------------
 // 文字コード変換＆保存先パスユーティリティ
@@ -148,57 +168,6 @@ static void ResetProgress()
     SetProgress(0);
 }
 
-#if(0) //レジストリ使用
-// Registry MRU
-static const wchar_t* kRegBase = L"Software\\YoloV5Trainer";
-static std::vector<std::wstring> LoadMRU(const std::wstring& name, int maxItems = 10)
-{
-    std::vector<std::wstring> items;
-    HKEY hKey = nullptr;
-    std::wstring subkey = std::wstring(kRegBase) + L"\\" + name;
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, subkey.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-        for (int i = 0; i < maxItems; i++) {
-            wchar_t valueName[32]; wsprintfW(valueName, L"Item%d", i);
-            wchar_t buf[MAX_PATH * 4]; DWORD cb = sizeof(buf); DWORD type = 0;
-            if (RegQueryValueExW(hKey, valueName, nullptr, &type, (LPBYTE)buf, &cb) == ERROR_SUCCESS && type == REG_SZ) {
-                items.emplace_back(buf);
-            }
-        }
-        RegCloseKey(hKey);
-    }
-    return items;
-}
-static void SaveMRU(const std::wstring& name, const std::wstring& value, int maxItems = 10)
-{
-    if (value.empty()) return;
-    auto items = LoadMRU(name, maxItems);
-    // Dedup and move to front
-    items.erase(std::remove(items.begin(), items.end(), value), items.end());
-    items.insert(items.begin(), value);
-    if ((int)items.size() > maxItems) items.resize(maxItems);
-
-    HKEY hKey = nullptr;
-    std::wstring subkey = std::wstring(kRegBase) + L"\\" + name;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, subkey.c_str(), 0, nullptr, 0, KEY_WRITE | KEY_READ, nullptr, &hKey, nullptr) == ERROR_SUCCESS) {
-        for (int i = 0; i < (int)items.size(); i++) {
-            wchar_t valueName[32]; wsprintfW(valueName, L"Item%d", i);
-            RegSetValueExW(hKey, valueName, 0, REG_SZ, (const BYTE*)items[i].c_str(), DWORD((items[i].size() + 1) * sizeof(wchar_t)));
-        }
-        // clear remains
-        for (int i = (int)items.size(); i < maxItems; i++) {
-            wchar_t valueName[32]; wsprintfW(valueName, L"Item%d", i);
-            RegDeleteValueW(hKey, valueName);
-        }
-        RegCloseKey(hKey);
-    }
-}
-static void LoadMRUToCombo(HWND hCombo, const std::wstring& name)
-{
-    SendMessageW(hCombo, CB_RESETCONTENT, 0, 0);
-    auto items = LoadMRU(name);
-    for (auto& s : items) SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)s.c_str());
-}
-#else
 static std::vector<std::wstring> LoadMRU(const std::wstring& section)
 {
     auto m = ReadIniColon();
@@ -224,11 +193,20 @@ static void LoadMRUToCombo(HWND hCombo, const std::wstring& section)
         SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)s.c_str());
     }
 }
-#endif
 
-// ------------------------------
-// ToolTip
-// ------------------------------
+// --- Flags loader for simple 0/1 states in mru_history.ini ---
+static bool LoadFlagFromIni(const wchar_t* key, bool def = false)
+{
+    auto v = LoadMRU(key);               // section=key の先頭要素を採用（"1" or "0"想定）
+    if (v.empty()) return def;
+    const std::wstring& s = v.front();
+    if (s == L"1") return true;
+    if (s == L"0") return false;
+    // 念のため true 系テキストも許容
+    if (_wcsicmp(s.c_str(), L"true") == 0 || _wcsicmp(s.c_str(), L"on") == 0) return true;
+    return def;
+}
+
 
 // ------------------------------
 // Command history
@@ -324,12 +302,14 @@ static bool CopyTreeWithProgress(const fs::path& src, const fs::path& dst)
 {
     if (!fs::exists(src)) { 
         AppendLog(L"[COPY] Source not found: " + src.wstring()); 
+        AppendLog(RET);
         return false; 
     }
     uint64_t total = CountFiles(src);
     if (!EnsureDir(dst)) { 
         AppendLog(L"[COPY] Cannot create: " + dst.wstring()); 
-        return false; 
+        AppendLog(RET);
+        return false;
     }
     uint64_t done = 0;
     for (auto& entry : fs::recursive_directory_iterator(src, fs::directory_options::skip_permission_denied)) {
@@ -444,6 +424,7 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull)
     if (!ok) {
         CloseHandle(hRead);
         AppendLog(L"[EXEC] Failed to start: " + cmdLineFull);
+        AppendLog(RET);
         return nullptr;
     }
 
@@ -472,6 +453,7 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull)
         WaitForSingleObject(piH, INFINITE);
         DWORD ec = 0; GetExitCodeProcess(piH, &ec);
         AppendLog(L"[EXEC] Exit code: " + std::to_wstring(ec));
+        AppendLog(RET);
         }).detach();
 
     CloseHandle(pi.hThread);
@@ -485,6 +467,7 @@ static void StopChild()
         TerminateProcess(h, 1);
         CloseHandle(h);
         AppendLog(L"[EXEC] Terminated.");
+        AppendLog(RET);
     }
 }
 
@@ -512,7 +495,12 @@ static void DoCopyToTemp()
     std::wstring img = GetText(g_hDlg, IDC_COMBO_IMG);
     std::wstring lab = GetText(g_hDlg, IDC_COMBO_LABEL);
     std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
-    if (img.empty() || lab.empty() || tmp.empty()) { AppendLog(L"[COPY] Missing path."); return; }
+    if (img.empty() || lab.empty() || tmp.empty()) 
+    { 
+        AppendLog(L"[COPY] Missing path."); 
+        AppendLog(RET);
+        return;
+    }
 
     fs::path dstImages = fs::path(tmp) / "source" / "images";
     fs::path dstLabels = fs::path(tmp) / "source" / "labels";
@@ -526,27 +514,30 @@ static void DoCopyToTemp()
 
     ResetProgress();
     AppendLog(L"[COPY] images -> " + dstImages.wstring());
-    if (!CopyTreeWithProgress(img, dstImages)) return;
+    AppendLog(RET);
+    if (!CopyTreeWithProgress(img, dstImages)) 
+        return;
     AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
-    if (!CopyTreeWithProgress(lab, dstLabels)) return;
+    AppendLog(RET);
+    if (!CopyTreeWithProgress(lab, dstLabels))
+        return;
     SetProgress(100);
     AppendLog(L"[COPY] Completed.");
-#if(0) //レジストリ使用
-    SaveMRU(L"Images", img);
-    SaveMRU(L"Labels", lab);
-    SaveMRU(L"Temp", tmp);
-#else
+    AppendLog(RET);
     SaveMRU(L"Image Data", img);
     SaveMRU(L"Label Data", lab);
     SaveMRU(L"Temp Dir", tmp);
-#endif
 }
 static void DoSplit()
 {
     std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
     int trainPct = _wtoi(GetText(g_hDlg, IDC_EDIT_TRAINPCT).c_str());
     double reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
-    if (tmp.empty() || trainPct <= 0) { AppendLog(L"[SPLIT] Missing temp or train%"); return; }
+    if (tmp.empty() || trainPct <= 0) { 
+        AppendLog(L"[SPLIT] Missing temp or train%"); 
+        AppendLog(RET);
+        return;
+    }
 
     fs::path src = fs::path(tmp) / "source";
     fs::path dst = fs::path(tmp) / "dataset";
@@ -554,9 +545,74 @@ static void DoSplit()
     catch (...) {}
     ResetProgress();
     AppendLog(L"[SPLIT] source=" + src.wstring() + L"   dest=" + dst.wstring());
+    AppendLog(RET);
     SplitDataset(src, dst, trainPct, reduc);   // based on your divfiles.cpp  :contentReference[oaicite:2]{index=2}
     SetProgress(100);
 }
+
+//////////////////////////////////////////////////////////////////////////////////////
+// 
+// Resume checkpoint file picker
+//
+//////////////////////////////////////////////////////////////////////////////////////
+static bool OpenResumeCheckpointFile(HWND hParent, std::wstring& outPath)
+{
+    wchar_t fileBuf[MAX_PATH] = L"";
+    OPENFILENAMEW ofn = { 0 };
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hParent;
+    ofn.lpstrFilter = L"PyTorch Weights (*.pt;*.pth)\0*.pt;*.pth\0All Files (*.*)\0*.*\0\0";
+    ofn.lpstrFile = fileBuf;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    ofn.lpstrDefExt = L"pt";
+
+    if (GetOpenFileNameW(&ofn))
+    {
+        outPath = fileBuf;
+        return true;
+    }
+    return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+// 
+// Add safe.directory to git config
+//
+//////////////////////////////////////////////////////////////////////////////////////
+
+static void AddSafeDirectory(const std::wstring& dir)
+{
+    // git config --global --add safe.directory "dir"
+    std::wstring cmd = L"git config --global --add safe.directory \"" + dir + L"\"";
+
+    // 非同期に実行（コンソールは出さない）
+    STARTUPINFOW si{};
+    PROCESS_INFORMATION pi{};
+    si.cb = sizeof(si);
+	AppendLog(L"[GIT] " + cmd);
+
+    if (CreateProcessW(
+        NULL,
+        cmd.data(),   // コマンドライン（可変なので直接渡す）
+        NULL, NULL,
+        FALSE,
+        CREATE_NO_WINDOW,
+        NULL, NULL,
+        &si, &pi))
+    {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        //MessageBoxW(NULL, L"safe.directory に追加しました。", L"Git設定", MB_OK | MB_ICONINFORMATION);
+		AppendLog(L"[GIT] safe.directory に追加しました。");
+    }
+    else
+    {
+        //MessageBoxW(NULL, L"git の実行に失敗しました。PATH設定を確認してください。", L"Git設定", MB_OK | MB_ICONERROR);
+		AppendLog(L"[GIT] git の実行に失敗しました。PATH設定を確認してください。");
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////
 // 
 // Build train command and launch
@@ -577,6 +633,7 @@ static void DoTrain()
     if (python.empty()) python = L"python";
     if (workdir.empty() || trainpy.empty() || datayaml.empty()) {
         AppendLog(L"[TRAIN] workdir/train.py/data.yaml is required.");
+        AppendLog(RET);
         return;
     }
 
@@ -591,6 +648,19 @@ static void DoTrain()
 
     std::wstring epochs = GetText(g_hDlg, IDC_COMBO_EPOCHS);
     if (!epochs.empty()) ss << L" --epochs " << epochs;
+
+    std::wstring patience = GetText(g_hDlg, IDC_CMB_PATIENCE);
+    if (!patience.empty()) ss << L" --patience " << patience;
+
+    if (IsDlgButtonChecked(g_hDlg, IDC_CMB_RESUME) == BST_CHECKED)
+    {
+        std::wstring resume = GetText(g_hDlg, IDC_CMB_RESUME);
+        if (resume.empty())
+            ss << L" --resume ";
+        else
+            ss << L" --resume " << resume;
+    }
+
     std::wstring batch = GetText(g_hDlg, IDC_COMBO_BATCHSIZE);
     if (!batch.empty()) ss << L" --batch " << batch;
     std::wstring imgsz = GetText(g_hDlg, IDC_COMBO_IMGSZ);
@@ -610,6 +680,7 @@ static void DoTrain()
 
     std::wstring command = ss.str();
     AppendLog(L"[TRAIN] " + command);
+    AppendLog(RET);
     LaunchWithCapture(command);
 
     // ここでコマンド履歴を追記（無制限）
@@ -650,10 +721,12 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
     SaveMRU(L"Name", GetText(hDlg, IDC_COMBO_NAME));
 
     // 学習オプション
-    SaveMRU(L"epochs", GetText(hDlg, IDC_COMBO_EPOCHS));
-    SaveMRU(L"batch", GetText(hDlg, IDC_COMBO_BATCHSIZE));
-    SaveMRU(L"imgsz", GetText(hDlg, IDC_COMBO_IMGSZ));
-    SaveMRU(L"device", GetText(hDlg, IDC_COMBO_DEVICE));
+    SaveMRU(L"epochs",      GetText(hDlg,   IDC_COMBO_EPOCHS));
+    SaveMRU(L"patience",    GetText(hDlg,   IDC_CMB_PATIENCE));
+    SaveMRU(L"resume",      GetText(hDlg,   IDC_CMB_RESUME));
+    SaveMRU(L"batch",       GetText(hDlg,   IDC_COMBO_BATCHSIZE));
+    SaveMRU(L"imgsz",       GetText(hDlg,   IDC_COMBO_IMGSZ));
+    SaveMRU(L"device",      GetText(hDlg,   IDC_COMBO_DEVICE));
     
     //SaveMRU(L"name", GetText(hDlg, IDC_COMBO_NAME));
     SaveMRU(L"project", GetText(hDlg, IDC_EDIT_PROJECT));
@@ -661,6 +734,12 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
     // チェックボックスは "1" / "0" を保存
     const bool cacheOn = (IsDlgButtonChecked(hDlg, IDC_CHK_CACHE) == BST_CHECKED);
     SaveMRU(L"cache", cacheOn ? L"1" : L"0");
+
+    const bool exist_ok = (IsDlgButtonChecked(hDlg, IDC_CHK_EXIST_OK) == BST_CHECKED);
+    SaveMRU(L"exist_ok", exist_ok ? L"1" : L"0");
+
+    const bool resume_chk = (IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME) == BST_CHECKED);
+    SaveMRU(L"resume_chk", resume_chk ? L"1" : L"0");
 }
 
 // ------------------------------
@@ -698,27 +777,16 @@ static void ShowFirstListItem(HWND hList)
     SendMessageW(hList, LB_SETTOPINDEX, 0, 0);
 }
 
+
 // ------------------------------
 static void InitDialog(HWND hDlg)
 {
     g_hDlg = hDlg;
+    
     SendDlgItemMessageW(hDlg, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
     ResetProgress();
 
-    // Load MRU to combos
-#if(0) //レジストリ使用
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_IMG), L"Images");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_LABEL), L"Labels");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_TEMP), L"Temp");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_WORKDIR), L"WorkDir");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_TRAINPY), L"TrainPy");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_YAML), L"DataYaml");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_HYP), L"HypYaml");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_CFG), L"CfgYaml");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_WEIGHTS), L"Weights");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_PYTHON), L"Python");
-    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), L"Environment");
-#else // INIファイル使用 同じ?
+	// 設定ファイルから読み込んでコンボにセット
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_IMG), L"Image Data");
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_LABEL), L"Label Data");
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_TEMP), L"Temp Dir");
@@ -737,7 +805,8 @@ static void InitDialog(HWND hDlg)
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_IMGSZ),       L"imgsz");
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_DEVICE),      L"device");
 
-#endif
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_CMB_PATIENCE),      L"patience");
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_CMB_RESUME),        L"resume");
 
     // ★ 先頭を表示（空なら何もしない）
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMG));
@@ -752,24 +821,39 @@ static void InitDialog(HWND hDlg)
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_PYTHON));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE));
 
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_PATIENCE));
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_RESUME));
 
     // 規定値
     SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
     SetDlgItemTextW(hDlg, IDC_EDIT_REDUCTION, L"1.0");
 
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_EPOCHS));
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_BATCHSIZE));
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMGSZ));
-    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_DEVICE));
+    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
+    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_EPOCHS));
+    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_BATCHSIZE));
+    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMGSZ));
+    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_DEVICE));
 
     //SetDlgItemTextW(hDlg, IDC_COMBO_EPOCHS, L"100");
     //SetDlgItemTextW(hDlg, IDC_COMBO_BATCHSIZE, L"16");
     //SetDlgItemTextW(hDlg, IDC_COMBO_IMGSZ, L"640");
 
-    CheckDlgButton(hDlg, IDC_CHK_CACHE, BST_UNCHECKED);
+    //CheckDlgButton(hDlg, IDC_CHK_CACHE, BST_UNCHECKED);
+    //CheckDlgButton(hDlg, IDC_CHECK_RESUME, BST_UNCHECKED);
+    //CheckDlgButton(hDlg, IDC_CHK_EXIST_OK, BST_UNCHECKED);
 
-	// ボタンにツールチップを追加
+    CheckDlgButton(hDlg, IDC_CHK_CACHE, LoadFlagFromIni(L"cache", false) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHK_EXIST_OK, LoadFlagFromIni(L"exist_ok", false) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHECK_RESUME, LoadFlagFromIni(L"resume_chk", false) ? BST_CHECKED : BST_UNCHECKED);
+
+    // ボタンのツールチップを設定
+    INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
+    InitCommonControlsEx(&icc);
+
+    //AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, g_tipTempText.c_str());
+	ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"Tempolary Directory", g_tipTempText.c_str());
+
+    // ボタンにツールチップを追加
     // Temp構成ツリー（英語表記は適宜変えてください）
     //g_tipTempText =
     //    L"Temp dir\r\n"
@@ -797,12 +881,14 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
     //UnquoteInPlace(path);
     if (path.empty()) {
         AppendLog(L"[OPEN] data.yaml path is empty.");
+        AppendLog(RET);
         return false;
     }
 
     // 存在チェック（存在しなくても ShellExecute は投げられるが、ユーザに優しく）
     if (!fs::exists(path)) {
         AppendLog(L"[OPEN] File not found: " + path);
+        AppendLog(RET);
         return false;
     }
 
@@ -820,10 +906,12 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
         // 代表的なエラー値を簡単に表示
         std::wstringstream ss;
         ss << L"[OPEN] ShellExecute failed (" << code << L") : " << path;
+        AppendLog(RET);
         AppendLog(ss.str());
         return false;
     }
     AppendLog(L"[OPEN] Launched editor for: " + path);
+    AppendLog(RET);
     return true;
 }
 
@@ -833,9 +921,36 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
 static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) {
-    case WM_INITDIALOG: InitDialog(hDlg); return TRUE;
+    case WM_INITDIALOG: 
+        InitDialog(hDlg); 
+        return TRUE;
     case WM_COMMAND:
-        switch (LOWORD(wParam)) {
+    {
+        //if (LOWORD(wParam) == IDC_STC_TEMP && HIWORD(wParam) == STN_CLICKED) {
+        //    if (bTmpTipShow) HideTempTip(hDlg);
+        //    else                ShowTempTipAtCursor(hDlg);
+        //    return TRUE;
+        //}
+        switch (LOWORD(wParam))
+        {
+        /*
+        case IDC_STC_TEMP: {
+            if(HIWORD(wParam) == STN_CLICKED)
+            {
+                if (bTmpTipShow) 
+                    HideTempTip(hDlg);
+                else 
+                    ShowTempTipAtCursor(hDlg);
+                return TRUE;
+            }
+		}break;
+
+        case WM_TIMER:
+            if (wParam == 1001) { 
+                HideTempTip(hDlg); 
+                return TRUE; }
+            return FALSE;
+            */
         case IDC_BTN_BROWSE_IMG: {
             std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_IMG), p); }
         } break;
@@ -863,37 +978,43 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 // ついでに MRU の先頭へ
                 SaveMRU(L"data.yaml", p);
             }
-		}break;
+        }break;
 
         case IDC_BTN_BROWSE_HYP: {
             COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
             std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_HYP), p); }
         } break;
-		case IDC_BTN_EDIT_HYP: {
-			std::wstring p = GetText(g_hDlg, IDC_COMBO_HYP);
-			if (OpenFileWithDefaultEditor(p)) {
-				// ついでに MRU の先頭へ
-				SaveMRU(L"hyp.yaml", p);
-			}
-		} break;
+        case IDC_BTN_EDIT_HYP: {
+            std::wstring p = GetText(g_hDlg, IDC_COMBO_HYP);
+            if (OpenFileWithDefaultEditor(p)) {
+                // ついでに MRU の先頭へ
+                SaveMRU(L"hyp.yaml", p);
+            }
+        } break;
 
         case IDC_BTN_BROWSE_CFG: {
             COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
             std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_CFG), p); }
         } break;
 
-		case IDC_BTN_EDIT_CFG: {
-			std::wstring p = GetText(g_hDlg, IDC_COMBO_CFG);
-			if (OpenFileWithDefaultEditor(p)) {
-				// ついでに MRU の先頭へ
-				SaveMRU(L"cfg.yaml", p);
-			}
-		} break;
+        case IDC_BTN_EDIT_CFG: {
+            std::wstring p = GetText(g_hDlg, IDC_COMBO_CFG);
+            if (OpenFileWithDefaultEditor(p)) {
+                // ついでに MRU の先頭へ
+                SaveMRU(L"cfg.yaml", p);
+            }
+        } break;
 
         case IDC_BTN_BROWSE_WEIGHTS: {
             COMDLG_FILTERSPEC spec[] = { {L"PyTorch (*.pt)", L"*.pt"} };
             std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_WEIGHTS), p); }
         } break;
+
+        case IDC_BTN_RESUME_BROWSE: {
+            COMDLG_FILTERSPEC spec[] = { {L"PyTorch (*.pt)", L"*.pt"} };
+            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_CMB_RESUME), p); }
+        } break;
+
         case IDC_BTN_BROWSE_PYTHON: {
             COMDLG_FILTERSPEC spec[] = { {L"Python executable (python.exe)", L"python.exe"} };
             std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_PYTHON), p); }
@@ -902,28 +1023,41 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             COMDLG_FILTERSPEC spec[] = { {L"Batch (*.bat;*.cmd)", L"*.bat;*.cmd"} };
             std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), p); }
         } break;
-
-        case IDC_BTN_COPY:
+        case IDC_BTN_COPY: {
             std::thread([]() { DoCopyToTemp(); }).detach();
-            break;
-
-        case IDC_BTN_SPLIT:
+        }break;
+        case IDC_BTN_SPLIT: {
             std::thread([]() { DoSplit(); }).detach();
-            break;
-
-        case IDC_BTN_TRAIN:
+        }break;
+        case IDC_BTN_TRAIN: {
             std::thread([]() { DoTrain(); }).detach();
-            break;
-
-        
-
-        case IDC_BTN_STOP:
+        }break;
+        case IDC_BTN_STOP: {
             StopChild();
-            break;
-
-        default: break;
+        }break;
+        case IDC_BTN_SAFE_DIR:
+        {
+            if (HIWORD(wParam) == BN_CLICKED)
+            {
+                // 例：あなたのGUIで「作業フォルダ」を保持している変数を使う
+                // ここでは仮に g_WorkDir として説明します
+                std::wstring workdir = GetText(g_hDlg, IDC_COMBO_WORKDIR);
+                if (!workdir.empty()) {
+                    AddSafeDirectory(workdir);
+                }
+                else {
+                    MessageBoxW(hDlg, L"作業ディレクトリが未設定です。", L"Git設定", MB_OK | MB_ICONWARNING);
+                }
+                //return TRUE;
+            }
         }
-        return TRUE;
+        break;
+
+        default:
+            break;
+        }
+        return false;
+    }
 
 	//case WM_DESTROY:
 	//	g_hDlg = nullptr;
@@ -946,7 +1080,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
 // ------------------------------
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
 {
-    g_hInst = hInstance;
+    //g_hInst = hInstance;
     LoadLibraryW(L"Msftedit.dll"); // RICHEDIT50W 用
 
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES | ICC_PROGRESS_CLASS };

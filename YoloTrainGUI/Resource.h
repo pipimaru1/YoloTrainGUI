@@ -59,6 +59,7 @@
 #define IDC_STC_TEMP					1073
 
 #define IDC_STATIC				   2300
+
 //#define IDC_STATIC_PATIENCE      2301
 #define IDC_COMBO_PATIENCE         2302
 //#define IDC_SPIN_PATIENCE        2303
@@ -66,3 +67,11 @@
 #define IDC_COMBO_RESUME_PATH      2305
 #define IDC_BTN_RESUME_BROWSE      2306
 #define IDC_CHECK_EXISTOK          2307
+
+#define IDC_CMB_PATIENCE          1801  // --patience のドロップダウン
+#define IDC_CMB_RESUME            1802  // --resume のドロップダウン
+#define IDC_BTN_RESUME_BROWSE     1803  // 参照... ボタン（ファイル選択）
+#define IDC_EDIT_RESUME_PATH      1804  // 選択した .pt 表示用（読み取り専用エディット推奨）
+#define IDC_CHK_EXIST_OK          1805  // --exist-ok のチェックボックス
+
+#define IDC_BTN_SAFE_DIR		  1901 // 安全なGITディレクトリを作成するボタン
