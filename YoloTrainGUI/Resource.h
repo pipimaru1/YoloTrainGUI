@@ -57,3 +57,12 @@
 
 // tooltips
 #define IDC_STC_TEMP					1073
+
+#define IDC_STATIC				   2300
+//#define IDC_STATIC_PATIENCE      2301
+#define IDC_COMBO_PATIENCE         2302
+//#define IDC_SPIN_PATIENCE        2303
+#define IDC_CHECK_RESUME           2304
+#define IDC_COMBO_RESUME_PATH      2305
+#define IDC_BTN_RESUME_BROWSE      2306
+#define IDC_CHECK_EXISTOK          2307
