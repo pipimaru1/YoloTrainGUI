@@ -61,3 +61,4 @@ public:
         SendMessageW(hnd_ToolTip, TTM_ADDTOOL, 0, (LPARAM)&ti);
     }
 };
+
