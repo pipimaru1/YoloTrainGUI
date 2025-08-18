@@ -1,0 +1,20 @@
+#include "pch.h"
+#include "YoloTrainGUI.h"
+
+std::wstring _g_tipTempText =
+L"Temp dir\r\n"
+L"├─ source\r\n"
+L"│   ├─ images (from shared)\r\n"
+L"│   └─ labels (from shared)\r\n"
+L"├─ train\r\n"
+L"│   ├─ images\r\n"
+L"│   └─ labels\r\n"
+L"└─ valid\r\n"
+L"    ├─ images\r\n"
+L"    └─ labels\r\n"
+L"画像データ、アノテーションは指定された\r\n"
+L"TempDirのsourceディレクトリの下にコピ\r\n"
+L"ーされます。\r\n"
+L"その後、sourceディレクトリのデータを分割\r\n"
+L"して、trainとvalidのサブディレクトリに配\r\n"
+L"置します。\r\n";
