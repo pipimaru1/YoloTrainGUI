@@ -10,6 +10,7 @@
 
 
 #include "resource.h"
+#include "resource_user.h"
 #include "YoloTrainGUI.h"
 #include "Tooltip.hpp"
 
@@ -31,8 +32,8 @@ static bool      bTmpTipShow = false;
 // ツールチップ
 Tooltip ttTmpDir; // グローバルなツールチップオブジェクト
 
-static std::wstring g_tipTempText =
-L"Temp dir\r\n"
+static std::wstring strTipTempDir =
+L"TempDir\r\n"
 L"├─ source\r\n"
 L"│   ├─ images (from shared)\r\n"
 L"│   └─ labels (from shared)\r\n"
@@ -41,8 +42,39 @@ L"│   ├─ images\r\n"
 L"│   └─ labels\r\n"
 L"└─ valid\r\n"
 L"    ├─ images\r\n"
-L"    └─ labels";
+L"    └─ labels\r\n"
+L"\r\n"
+L"元データは ./TempDir/source にコピーされます。\r\n"
+L"トレーニング用と検証用に分割されると、\r\n"
+L"./TempDir/train および./TempDir/valid にコピーされます。\r\n";
 
+static std::wstring strTipDataYaml = 
+L"クラシフィケーション定義とデータフォルダを記載します。 \r\n"
+L"下記を参考に記述してください。絶対パスの方が安定します。\r\n"
+L"\r\n"
+L"train: C:/TempDir/train/images \r\n"
+L"val : C:/TempDir/valid/images \r\n";
+
+static std::wstring strTipTrainPy =
+L"train.pyを指定します。\r\n"
+L"通常はパスを入れずに train.py とだけ記述してください。\r\n";
+
+static std::wstring strTipPythonExe =
+L"python.exeを指定します。\r\n"
+L"通常はパスを入れずに Python.exe とだけ記述してください。\r\n";
+
+static std::wstring strTipWorkDir =
+L"Yolov5の作業ディレクトリを指定します。\r\n"
+L"train.pyのあるディレクトリを指定してください。\r\n";
+
+void SetTootips(HWND hDlg)
+{
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"Tempolary Directory", strTipTempDir.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DATA_YAML, L"Tempolary Directory", strTipDataYaml.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"train.py", strTipTrainPy.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PYTHONEXE, L"train.py", strTipPythonExe.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WORKDIR, L"WorkDir", strTipWorkDir.c_str());
+}
 
 // ------------------------------
 // 文字コード変換＆保存先パスユーティリティ
@@ -629,6 +661,7 @@ static void DoTrain()
     std::wstring weights = GetText(g_hDlg, IDC_COMBO_WEIGHTS);
     std::wstring python = GetText(g_hDlg, IDC_COMBO_PYTHON);
     std::wstring activate = GetText(g_hDlg, IDC_COMBO_ACTIVATE);
+    std::wstring resume = GetText(g_hDlg, IDC_CMB_RESUME);
 
     if (python.empty()) python = L"python";
     if (workdir.empty() || trainpy.empty() || datayaml.empty()) {
@@ -652,14 +685,14 @@ static void DoTrain()
     std::wstring patience = GetText(g_hDlg, IDC_CMB_PATIENCE);
     if (!patience.empty()) ss << L" --patience " << patience;
 
-    if (IsDlgButtonChecked(g_hDlg, IDC_CMB_RESUME) == BST_CHECKED)
+    if (IsDlgButtonChecked(g_hDlg, IDC_CHECK_RESUME) == BST_CHECKED)
     {
-        std::wstring resume = GetText(g_hDlg, IDC_CMB_RESUME);
         if (resume.empty())
             ss << L" --resume ";
         else
-            ss << L" --resume " << resume;
+            ss << L" --resume " << Quote(resume);
     }
+
 
     std::wstring batch = GetText(g_hDlg, IDC_COMBO_BATCHSIZE);
     if (!batch.empty()) ss << L" --batch " << batch;
@@ -667,7 +700,18 @@ static void DoTrain()
     if (!imgsz.empty()) ss << L" --img " << imgsz;
     std::wstring device = GetText(g_hDlg, IDC_COMBO_DEVICE);
     if (!device.empty()) ss << L" --device " << device;
-    if (!hypyaml.empty()) ss << L" --hyp " << Quote(hypyaml);
+
+    //hyper parameters
+    //if (!hypyaml.empty()) ss << L" --hyp " << Quote(hypyaml);
+    if (IsDlgButtonChecked(g_hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED)
+    {
+        //std::wstring _hyper = GetText(g_hDlg, IDC_COMBO_HYP);
+        if (hypyaml.empty())
+            ss << L" --hyp ";
+        else
+            ss << L" --hyp " << Quote(hypyaml);
+    }
+
     if (!cfgyaml.empty()) ss << L" --cfg " << Quote(cfgyaml);
     if (!weights.empty()) ss << L" --weights " << Quote(weights);
     if (IsDlgButtonChecked(g_hDlg, IDC_CHK_CACHE) == BST_CHECKED) ss << L" --cache";
@@ -695,6 +739,7 @@ static void DoTrain()
     SaveMRU(L"weights.pt", weights);
     SaveMRU(L"Python.exe", python);
     SaveMRU(L"Activate.bat", activate);
+    SaveMRU(L"resume", resume);
 }
 
 static void SaveCurrentSettingsToIni(HWND hDlg)
@@ -740,6 +785,10 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
 
     const bool resume_chk = (IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME) == BST_CHECKED);
     SaveMRU(L"resume_chk", resume_chk ? L"1" : L"0");
+
+    const bool hyper_chk = (IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED);
+    SaveMRU(L"hyper_chk", hyper_chk ? L"1" : L"0");
+
 }
 
 // ------------------------------
@@ -821,6 +870,12 @@ static void InitDialog(HWND hDlg)
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_PYTHON));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE));
 
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_EPOCHS));
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_BATCHSIZE));
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMGSZ));
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_DEVICE));
+
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_PATIENCE));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_RESUME));
 
@@ -828,48 +883,16 @@ static void InitDialog(HWND hDlg)
     SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
     SetDlgItemTextW(hDlg, IDC_EDIT_REDUCTION, L"1.0");
 
-    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_NAME));
-    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_EPOCHS));
-    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_BATCHSIZE));
-    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMGSZ));
-    //ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_DEVICE));
-
-    //SetDlgItemTextW(hDlg, IDC_COMBO_EPOCHS, L"100");
-    //SetDlgItemTextW(hDlg, IDC_COMBO_BATCHSIZE, L"16");
-    //SetDlgItemTextW(hDlg, IDC_COMBO_IMGSZ, L"640");
-
-    //CheckDlgButton(hDlg, IDC_CHK_CACHE, BST_UNCHECKED);
-    //CheckDlgButton(hDlg, IDC_CHECK_RESUME, BST_UNCHECKED);
-    //CheckDlgButton(hDlg, IDC_CHK_EXIST_OK, BST_UNCHECKED);
-
-    CheckDlgButton(hDlg, IDC_CHK_CACHE, LoadFlagFromIni(L"cache", false) ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton(hDlg, IDC_CHK_EXIST_OK, LoadFlagFromIni(L"exist_ok", false) ? BST_CHECKED : BST_UNCHECKED);
-    CheckDlgButton(hDlg, IDC_CHECK_RESUME, LoadFlagFromIni(L"resume_chk", false) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHK_CACHE,         LoadFlagFromIni(L"cache",       false) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHK_EXIST_OK,      LoadFlagFromIni(L"exist_ok",    false) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHECK_RESUME,      LoadFlagFromIni(L"resume_chk",  false) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(hDlg, IDC_CHK_USEHYPERPARAM, LoadFlagFromIni(L"hyper_chk",   false) ? BST_CHECKED : BST_UNCHECKED);
 
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
     InitCommonControlsEx(&icc);
 
-    //AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, g_tipTempText.c_str());
-	ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"Tempolary Directory", g_tipTempText.c_str());
-
-    // ボタンにツールチップを追加
-    // Temp構成ツリー（英語表記は適宜変えてください）
-    //g_tipTempText =
-    //    L"Temp dir\r\n"
-    //    L"├─ source\r\n"
-    //    L"│   ├─ images (from shared)\r\n"
-    //    L"│   └─ labels (from shared)\r\n"
-    //    L"├─ train\r\n"
-    //    L"│   ├─ images\r\n"
-    //    L"│   └─ labels\r\n"
-    //    L"└─ valid\r\n"
-    //    L"    ├─ images\r\n"
-    //    L"    └─ labels";
-
-    // ついでに、コンボ自体にも同じツールチップを付けたい場合：
-    // AddTooltipForCtrl(hDlg, IDC_COMBO_TEMP, g_tipTempText);
-
+    SetTootips(hDlg);
 }
 
 // 既定アプリで開く（“open” 動詞）
@@ -933,24 +956,6 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
         //}
         switch (LOWORD(wParam))
         {
-        /*
-        case IDC_STC_TEMP: {
-            if(HIWORD(wParam) == STN_CLICKED)
-            {
-                if (bTmpTipShow) 
-                    HideTempTip(hDlg);
-                else 
-                    ShowTempTipAtCursor(hDlg);
-                return TRUE;
-            }
-		}break;
-
-        case WM_TIMER:
-            if (wParam == 1001) { 
-                HideTempTip(hDlg); 
-                return TRUE; }
-            return FALSE;
-            */
         case IDC_BTN_BROWSE_IMG: {
             std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_IMG), p); }
         } break;
@@ -1014,6 +1019,53 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             COMDLG_FILTERSPEC spec[] = { {L"PyTorch (*.pt)", L"*.pt"} };
             std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_CMB_RESUME), p); }
         } break;
+
+        // conda info --envsを実行して環境を確認する
+        case IDC_BTN_VIEW_PYENV:
+        {
+            std::wstring cmd = L"conda info --envs";
+            AppendLog(L"[ENV] " + cmd);
+            AppendLog(RET);
+            LaunchWithCapture(cmd);
+		} break;
+
+		//TempDirのディレクトリの下にあるディレクトリ、ファイル消去する。
+        case IDC_BTN_CLEARTMP: {
+            if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加
+
+            std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
+            if (tempDir.empty()) {
+                AppendLog(L"[TEMP] Temp directory is not set.");
+                AppendLog(RET);
+                return TRUE;
+            }
+            fs::path tempPath(tempDir);
+            if (!fs::exists(tempPath)) {
+                AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring());
+                AppendLog(RET);
+                return TRUE;
+            }
+            //一応本当に消すか確認する
+            int _ret = MessageBoxW(hDlg, L"Temp directory will be cleared. Continue?", L"Confirm", MB_OKCANCEL | MB_ICONWARNING);
+            if (_ret == IDOK) {
+                try {
+                    fs::remove_all(tempPath);
+                    AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
+                }
+                catch (const fs::filesystem_error& e) {
+                    std::wstring _tmp = FromUTF8(e.what());
+                    AppendLog(L"[TEMP] Error clearing temp directory: " + _tmp);
+                }
+            }
+            else
+            {
+                AppendLog(L"[TEMP] Clear operation cancelled.");
+                AppendLog(RET);
+                return TRUE;
+            }
+
+            AppendLog(RET);
+		} break;
 
         case IDC_BTN_BROWSE_PYTHON: {
             COMDLG_FILTERSPEC spec[] = { {L"Python executable (python.exe)", L"python.exe"} };
