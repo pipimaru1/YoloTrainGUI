@@ -725,6 +725,8 @@ static void DoTrain()
     std::wstring command = ss.str();
     AppendLog(L"[TRAIN] " + command);
     AppendLog(RET);
+
+	//ここでコマンドを実行
     LaunchWithCapture(command);
 
     // ここでコマンド履歴を追記（無制限）
