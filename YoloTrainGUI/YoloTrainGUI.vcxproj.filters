@@ -64,4 +64,7 @@
   <ItemGroup>
     <None Include="mru_history.ini" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="history.txt" />
+  </ItemGroup>
 </Project>
