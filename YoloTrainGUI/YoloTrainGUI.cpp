@@ -644,6 +644,22 @@ static void AddSafeDirectory(const std::wstring& dir)
 		AppendLog(L"[GIT] git の実行に失敗しました。PATH設定を確認してください。");
     }
 }
+//////////////////////////////////////////////////////////////////////////////////////
+// 
+// Get text from a control
+//
+//////////////////////////////////////////////////////////////////////////////////////
+struct TrainParams {
+    std::wstring backend;  // "v5" or "v8"
+    std::wstring workdir, python, activate;
+    std::wstring data_yaml, weights_or_model;
+    std::wstring epochs, patience, batch, imgsz, device, name, project, resume_path;
+    bool resume_flag, cache_flag, exist_ok_flag;
+    // v8 only
+    std::wstring task;     // detect/segment/pose/classify
+};
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -662,8 +678,21 @@ static void DoTrain()
     std::wstring python = GetText(g_hDlg, IDC_COMBO_PYTHON);
     std::wstring activate = GetText(g_hDlg, IDC_COMBO_ACTIVATE);
     std::wstring resume = GetText(g_hDlg, IDC_CMB_RESUME);
+    std::wstring epochs = GetText(g_hDlg, IDC_COMBO_EPOCHS);
+    std::wstring patience = GetText(g_hDlg, IDC_CMB_PATIENCE);
+    std::wstring batch = GetText(g_hDlg, IDC_COMBO_BATCHSIZE);
+    std::wstring imgsz = GetText(g_hDlg, IDC_COMBO_IMGSZ);
+    std::wstring device = GetText(g_hDlg, IDC_COMBO_DEVICE);
+    std::wstring _NAME = GetText(g_hDlg, IDC_COMBO_NAME);
+    std::wstring project = GetText(g_hDlg, IDC_EDIT_PROJECT);
+
+	//チェックボックスの状態を取得
+    int chkResume = IsDlgButtonChecked(g_hDlg, IDC_CHECK_RESUME);
+    int chkCache = IsDlgButtonChecked(g_hDlg, IDC_CHK_CACHE);
+	int chkUseHyp = IsDlgButtonChecked(g_hDlg, IDC_CHK_USEHYPERPARAM);
 
     if (python.empty()) python = L"python";
+
     if (workdir.empty() || trainpy.empty() || datayaml.empty()) {
         AppendLog(L"[TRAIN] workdir/train.py/data.yaml is required.");
         AppendLog(RET);
@@ -679,13 +708,12 @@ static void DoTrain()
     ss << Quote(python) << L" " << Quote(trainpy)
         << L" --data " << Quote(datayaml);
 
-    std::wstring epochs = GetText(g_hDlg, IDC_COMBO_EPOCHS);
     if (!epochs.empty()) ss << L" --epochs " << epochs;
 
-    std::wstring patience = GetText(g_hDlg, IDC_CMB_PATIENCE);
     if (!patience.empty()) ss << L" --patience " << patience;
 
-    if (IsDlgButtonChecked(g_hDlg, IDC_CHECK_RESUME) == BST_CHECKED)
+    //if (IsDlgButtonChecked(g_hDlg, IDC_CHECK_RESUME) == BST_CHECKED)
+    if (chkResume == BST_CHECKED)
     {
         if (resume.empty())
             ss << L" --resume ";
@@ -693,17 +721,14 @@ static void DoTrain()
             ss << L" --resume " << Quote(resume);
     }
 
-
-    std::wstring batch = GetText(g_hDlg, IDC_COMBO_BATCHSIZE);
     if (!batch.empty()) ss << L" --batch " << batch;
-    std::wstring imgsz = GetText(g_hDlg, IDC_COMBO_IMGSZ);
     if (!imgsz.empty()) ss << L" --img " << imgsz;
-    std::wstring device = GetText(g_hDlg, IDC_COMBO_DEVICE);
     if (!device.empty()) ss << L" --device " << device;
 
     //hyper parameters
     //if (!hypyaml.empty()) ss << L" --hyp " << Quote(hypyaml);
-    if (IsDlgButtonChecked(g_hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED)
+    //if (IsDlgButtonChecked(g_hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED)
+    if (chkUseHyp == BST_CHECKED)
     {
         //std::wstring _hyper = GetText(g_hDlg, IDC_COMBO_HYP);
         if (hypyaml.empty())
@@ -714,12 +739,12 @@ static void DoTrain()
 
     if (!cfgyaml.empty()) ss << L" --cfg " << Quote(cfgyaml);
     if (!weights.empty()) ss << L" --weights " << Quote(weights);
-    if (IsDlgButtonChecked(g_hDlg, IDC_CHK_CACHE) == BST_CHECKED) ss << L" --cache";
+    //if (IsDlgButtonChecked(g_hDlg, IDC_CHK_CACHE) == BST_CHECKED)
+    if (chkCache == BST_CHECKED)
+            ss << L" --cache disk";
 
-    std::wstring _NAME = GetText(g_hDlg, IDC_COMBO_NAME);
     if (!_NAME.empty()) ss << L" --name " << Quote(_NAME);
 
-    std::wstring project = GetText(g_hDlg, IDC_EDIT_PROJECT);
     if (!project.empty()) ss << L" --project " << Quote(project);
 
     std::wstring command = ss.str();

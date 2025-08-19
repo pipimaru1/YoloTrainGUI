@@ -12,6 +12,11 @@
 #define IDC_BTN_CLEARTMP		  1813
 #define IDC_STC_WORKDIR           1814
 #define IDC_CHK_USEHYPERPARAM     1815
+#define IDC_RAD_YOLOV5			  1816   // 「YOLOv5」ラジオ
+#define IDC_RAD_YOLOV8            1817   // 「YOLOv8」ラジオ
+#define IDC_RAD_YOLO11            1818   // 「YOLOv8」ラジオ
+#define IDC_GRP_YOLOVERSION       1819 
+
 
 /*
 リソース追加手順
