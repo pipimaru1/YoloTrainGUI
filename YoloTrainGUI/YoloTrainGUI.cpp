@@ -712,8 +712,9 @@ public:
 
     //メソッド
     int ReadControls(HWND hDlg);
-    void DoTrain();
     int SaveCurrentSettingsToIni(HWND hDlg);
+    void DoTrain();
+    void DoTrain_old();
 
 };
 
@@ -755,7 +756,14 @@ int TrainParams::ReadControls(HWND hDlg)
     return 0;
 }
 
-void TrainParams::DoTrain()
+/////////////////////////////////////////////////////////////
+// 
+// トレーニング実行
+// ここで設定値を取得してコマンドラインを構築し、
+// Python スクリプトを呼び出す
+//
+/////////////////////////////////////////////////////////////
+void TrainParams::DoTrain_old()
 {
     if (python.empty()) python = L"python";
 
@@ -819,21 +827,137 @@ void TrainParams::DoTrain()
 
     // MRU 保存（各セクション256件まで）
     SaveCurrentSettingsToIni(nullptr);
+}
+/////////////////////////////////////////////////////////////
+// 
+// トレーニング実行
+// ここで設定値を取得してコマンドラインを構築し、
+// Python スクリプトを呼び出す
+//
+/////////////////////////////////////////////////////////////
+void TrainParams::DoTrain()
+{
+    if (python.empty())
+        python = L"python";
 
-    //SaveMRU(L"WorkDir", workdir);
-    //SaveMRU(L"train.py", trainpy);
-    //SaveMRU(L"data.yaml", datayaml);
-    //SaveMRU(L"hyp.yaml", hypyaml);
-    //SaveMRU(L"cfg.yaml", cfgyaml);
-    //SaveMRU(L"weights.pt", weights);
-    //SaveMRU(L"Python.exe", python);
-    //SaveMRU(L"Activate.bat", activate);
-    //SaveMRU(L"resume", resume);
+    // UIの exist_ok チェックは ReadControls で取っていないのでここで拾う
+    exist_ok = (IsDlgButtonChecked(g_hDlg, IDC_CHK_EXIST_OK) == BST_CHECKED);
+
+    // どのバックエンドか（ラジオ）
+    std::wstring be = L"YOLOV5";
+    if (IsDlgButtonChecked(g_hDlg, IDC_RAD_YOLOV8) == BST_CHECKED)
+        be = L"YOLOV8";
+    else if (IsDlgButtonChecked(g_hDlg, IDC_RAD_YOLO11) == BST_CHECKED)
+        be = L"YOLO11";
+
+    // 共通必須チェック
+    if (datayaml.empty()) {
+        AppendLog(L"[TRAIN] data.yaml is required.");
+        AppendLog(RET);
+        return;
+    }
+    if (workdir.empty()) {
+        AppendLog(L"[TRAIN] workdir is required.");
+        AppendLog(RET);
+        return;
+    }
+
+    std::wstringstream ss;
+
+    // conda/venv の有効化
+    if (!activate.empty()) {
+        ss << L"call activate " << Quote(activate) << L" && ";
+    }
+    // 作業ディレクトリへ
+    ss << L"cd /d " << Quote(workdir) << L" && ";
+
+    if (be == L"YOLOV5")
+    {
+        // --- 従来どおり：train.py を直接呼ぶ ---
+        if (trainpy.empty()) {
+            AppendLog(L"[TRAIN] train.py path/name is required for YOLOv5.");
+            AppendLog(RET);
+            return;
+        }
+        ss << Quote(python) << L" " << Quote(trainpy)
+            << L" --data " << Quote(datayaml);
+
+        if (!epochs.empty())   ss << L" --epochs " << epochs;
+        if (!patience.empty()) ss << L" --patience " << patience;
+
+        if (chkResume == BST_CHECKED) {
+            if (resume.empty()) ss << L" --resume";
+            else                ss << L" --resume " << Quote(resume);
+        }
+
+        if (!batch.empty()) ss << L" --batch " << batch;
+        if (!imgsz.empty()) ss << L" --img " << imgsz;   // v5 は --img
+        if (!device.empty()) ss << L" --device " << device;
+
+        if (chkUseHyp == BST_CHECKED) {
+            if (hypyaml.empty()) ss << L" --hyp";
+            else                 ss << L" --hyp " << Quote(hypyaml);
+        }
+        if (!cfgyaml.empty())   ss << L" --cfg " << Quote(cfgyaml);
+        if (!weights.empty())   ss << L" --weights " << Quote(weights);
+        if (chkCache == BST_CHECKED) ss << L" --cache disk";
+        if (exist_ok)                ss << L" --exist-ok";
+
+        if (!_NAME.empty())  ss << L" --name " << Quote(_NAME);
+        if (!project.empty()) ss << L" --project " << Quote(project);
+    }
+    else
+    {
+        // --- YOLOv8 / YOLO11：Ultralytics CLI を使用 ---
+        // model は UI の「weights」欄を流用（yolov8n.pt / yolo11n.pt / 任意パス）
+        if (weights.empty()) {
+            AppendLog(L"[TRAIN] model (.pt) is recommended for YOLOv8/YOLO11 (set in Weights field).");
+            AppendLog(RET);
+        }
+
+        // 既定は "python -m ultralytics"。yolo コマンドが PATH にあるなら差し替えたい場合はここで検出して置換も可。
+        ss << Quote(python) << L" -m ultralytics "
+            << task << L" train"
+            << L" data=" << Quote(datayaml);
+
+        if (!weights.empty())   ss << L" model=" << Quote(weights);  // v8/11 は model=
+        if (!epochs.empty())    ss << L" epochs=" << epochs;
+        if (!patience.empty())  ss << L" patience=" << patience;
+        if (!batch.empty())     ss << L" batch=" << batch;
+        if (!imgsz.empty())     ss << L" imgsz=" << imgsz;           // v8/11 は imgsz=
+        if (!device.empty())    ss << L" device=" << device;
+
+        if (chkResume == BST_CHECKED) {
+            if (resume.empty()) ss << L" resume=True";
+            else                ss << L" resume=" << Quote(resume);
+        }
+        if (chkCache == BST_CHECKED) ss << L" cache=True";
+        if (exist_ok)                ss << L" exist_ok=True";
+
+        if (!_NAME.empty())     ss << L" name=" << Quote(_NAME);
+        if (!project.empty())   ss << L" project=" << Quote(project);
+
+        // hyp/cfg は v8/11 では通常不要。必要なら overrides 用に cfg= を追加する等で拡張可。
+    }
+
+    const std::wstring command = ss.str();
+    AppendLog(L"[TRAIN] " + command);
+    AppendLog(RET);
+
+    // 実行（既存の外部プロセス起動＋標準出力をRichEditに反映）
+    LaunchWithCapture(command);                  // 進捗・ANSI対応のログ表示あり
+    AppendCmdHistory(command);                   // 履歴へ追記
+    SaveCurrentSettingsToIni(nullptr);           // MRU保存}
 }
 
+/////////////////////////////////////////////////////////////////
+// 
+// 共有データ（画像／ラベル）とテンポラリディレクトリの設定を保存
+// メモリまたはコントロールから取得して保存
+//
+/////////////////////////////////////////////////////////////////
 int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 {
-	// 共有データ（画像／ラベル）とテンポラリディレクトリの設定を保存
 	
     // hDlgが有効なら各コントロールから値を取得して保存
 	if (hDlg != nullptr)
