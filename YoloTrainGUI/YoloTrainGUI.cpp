@@ -226,6 +226,31 @@ static void LoadMRUToCombo(HWND hCombo, const std::wstring& section)
     }
 }
 
+static void LoadMRUToTextControl(HWND hEditText, const std::wstring& section)
+{
+    SendMessageW(hEditText, WM_SETTEXT, 0, (LPARAM)L"");
+    auto v = LoadMRU(section);
+    if (!v.empty()) {
+        std::wstring s = v.front(); // 先頭要素を採用
+        SendMessageW(hEditText, WM_SETTEXT, 0, (LPARAM)s.c_str());
+    }
+}
+
+//単純に文字列を
+std::wstring LoadMRUToString(HWND hEditText, const std::wstring& section)
+{
+	std::wstring s = L"";
+    auto v = LoadMRU(section);
+    if (!v.empty()) {
+        std::wstring s = v.front(); // 先頭要素を採用
+        return s;
+    }
+    return s;
+}
+
+
+
+
 // --- Flags loader for simple 0/1 states in mru_history.ini ---
 static bool LoadFlagFromIni(const wchar_t* key, bool def = false)
 {
@@ -648,7 +673,6 @@ static void AddSafeDirectory(const std::wstring& dir)
 // Get text from a control
 //////////////////////////////////////////////////////////////////////////////////////
 class TrainParams {
-    std::wstring backend;  // "v5" or "v8" or "11"
     std::wstring workdir;
     std::wstring trainpy;
     std::wstring datayaml;
@@ -672,7 +696,8 @@ class TrainParams {
     int exist_ok = 0; // 0 or 1
 
     // v8 only
-    std::wstring task;     // detect/segment/pose/classify
+    std::wstring task;    // detect/segment/pose/classify
+	std::wstring backend; // "YOLOV5" or "YOLOV8" or "YOLO11"
 
 public:
     TrainParams() : backend(L"v8"), workdir(L""), trainpy(L"train.py"), datayaml(L""), hypyaml(L""), cfgyaml(L""), 
@@ -855,6 +880,21 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 
         chkUseHyp = (IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED);
         SaveMRU(L"hyper_chk", chkUseHyp ? L"1" : L"0");
+
+        // Yolov5,yolov8, yolo11ラジオボタンの状態を保存
+        if (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV5) == BST_CHECKED) {
+            SaveMRU(L"backend", L"YOLOV5");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV8) == BST_CHECKED) {
+            SaveMRU(L"backend", L"YOLOV8");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RAD_YOLO11) == BST_CHECKED) {
+            SaveMRU(L"backend", L"YOLO11");
+        }
+        else {
+            SaveMRU(L"backend", L"YOLOV5");
+		}
+
     }
     else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
     {
@@ -893,6 +933,9 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         SaveMRU(L"exist_ok", this->exist_ok ? L"1" : L"0");
         SaveMRU(L"resume_chk", this->chkResume ? L"1" : L"0");
         SaveMRU(L"hyper_chk", this->chkUseHyp ? L"1" : L"0");
+
+		// Yolov5,yolov8, yolo11ラジオボタンの状態を保存
+        SaveMRU(L"backend", this->backend);
     }
     return 0;
 }
@@ -1010,6 +1053,22 @@ static void InitDialog(HWND hDlg)
     CheckDlgButton(hDlg, IDC_CHK_EXIST_OK,      LoadFlagFromIni(L"exist_ok",    false) ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHECK_RESUME,      LoadFlagFromIni(L"resume_chk",  false) ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHK_USEHYPERPARAM, LoadFlagFromIni(L"hyper_chk",   false) ? BST_CHECKED : BST_UNCHECKED);
+
+	LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_PROJECT), L"project");
+
+	std::wstring backend = LoadMRUToString(GetDlgItem(hDlg, IDC_RAD_YOLOV5), L"backend");
+    if( backend == L"YOLOV5") {
+        CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5);
+    }
+    else if (backend == L"YOLOV8") {
+        CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV8);
+    }
+    else if (backend == L"YOLO11") {
+        CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLO11);
+    }
+    else {
+        CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5); // default
+	}
 
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
