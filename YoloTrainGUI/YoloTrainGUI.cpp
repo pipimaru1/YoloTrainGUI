@@ -669,10 +669,12 @@ class TrainParams {
 	int chkResume = 0; // 0 or 1
 	int chkCache = 0; // 0 or 1
 	int chkUseHyp = 0; // 0 or 1
+    int exist_ok = 0; // 0 or 1
 
     // v8 only
     std::wstring task;     // detect/segment/pose/classify
 
+public:
     TrainParams() : backend(L"v8"), workdir(L""), trainpy(L"train.py"), datayaml(L""), hypyaml(L""), cfgyaml(L""), 
         weights(L""), python(L"python"), activate(L""), resume(L""), epochs(L"300"), patience(L"50"), batch(L"16"), imgsz(L"640"),
 		device(L"0"), _NAME(L""), project(L"runs/train"), task(L"detect")
@@ -680,11 +682,13 @@ class TrainParams {
         chkResume = 0;
 		chkCache = 0;
         chkUseHyp = 0;
+		exist_ok = 0; 
     }
 
     //メソッド
     int ReadControls(HWND hDlg);
     void DoTrain();
+    int SaveCurrentSettingsToIni(HWND hDlg);
 
 };
 
@@ -789,15 +793,108 @@ void TrainParams::DoTrain()
     AppendCmdHistory(command);
 
     // MRU 保存（各セクション256件まで）
-    SaveMRU(L"WorkDir", workdir);
-    SaveMRU(L"train.py", trainpy);
-    SaveMRU(L"data.yaml", datayaml);
-    SaveMRU(L"hyp.yaml", hypyaml);
-    SaveMRU(L"cfg.yaml", cfgyaml);
-    SaveMRU(L"weights.pt", weights);
-    SaveMRU(L"Python.exe", python);
-    SaveMRU(L"Activate.bat", activate);
-    SaveMRU(L"resume", resume);
+    SaveCurrentSettingsToIni(nullptr);
+
+    //SaveMRU(L"WorkDir", workdir);
+    //SaveMRU(L"train.py", trainpy);
+    //SaveMRU(L"data.yaml", datayaml);
+    //SaveMRU(L"hyp.yaml", hypyaml);
+    //SaveMRU(L"cfg.yaml", cfgyaml);
+    //SaveMRU(L"weights.pt", weights);
+    //SaveMRU(L"Python.exe", python);
+    //SaveMRU(L"Activate.bat", activate);
+    //SaveMRU(L"resume", resume);
+}
+
+int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
+{
+	// 共有データ（画像／ラベル）とテンポラリディレクトリの設定を保存
+	
+    // hDlgが有効なら各コントロールから値を取得して保存
+	if (hDlg != nullptr)
+    {
+        SaveMRU(L"Image Data", GetText(hDlg, IDC_COMBO_IMG));
+        SaveMRU(L"Label Data", GetText(hDlg, IDC_COMBO_LABEL));
+        SaveMRU(L"Temp Dir", GetText(hDlg, IDC_COMBO_TEMP));
+
+        // 分割パラメータ
+        SaveMRU(L"TrainPercent", GetText(hDlg, IDC_EDIT_TRAINPCT));  // 例: "80"
+        SaveMRU(L"Reduction", GetText(hDlg, IDC_EDIT_REDUCTION)); // 例: "1.0"
+
+        // 実行ファイル／ワークスペース
+        SaveMRU(L"WorkDir", GetText(hDlg, IDC_COMBO_WORKDIR));
+        SaveMRU(L"train.py", GetText(hDlg, IDC_COMBO_TRAINPY));
+        SaveMRU(L"data.yaml", GetText(hDlg, IDC_COMBO_YAML));
+        SaveMRU(L"hyp.yaml", GetText(hDlg, IDC_COMBO_HYP));
+        SaveMRU(L"cfg.yaml", GetText(hDlg, IDC_COMBO_CFG));
+        SaveMRU(L"weights.pt", GetText(hDlg, IDC_COMBO_WEIGHTS));
+        SaveMRU(L"Python.exe", GetText(hDlg, IDC_COMBO_PYTHON));
+        SaveMRU(L"Environment", GetText(hDlg, IDC_COMBO_ACTIVATE));
+        SaveMRU(L"Name", GetText(hDlg, IDC_COMBO_NAME));
+
+        // 学習オプション
+        SaveMRU(L"epochs", GetText(hDlg, IDC_COMBO_EPOCHS));
+        SaveMRU(L"patience", GetText(hDlg, IDC_CMB_PATIENCE));
+        SaveMRU(L"resume", GetText(hDlg, IDC_CMB_RESUME));
+        SaveMRU(L"batch", GetText(hDlg, IDC_COMBO_BATCHSIZE));
+        SaveMRU(L"imgsz", GetText(hDlg, IDC_COMBO_IMGSZ));
+        SaveMRU(L"device", GetText(hDlg, IDC_COMBO_DEVICE));
+
+        //SaveMRU(L"name", GetText(hDlg, IDC_COMBO_NAME));
+        SaveMRU(L"project", GetText(hDlg, IDC_EDIT_PROJECT));
+
+        // チェックボックスは "1" / "0" を保存
+        chkCache = (IsDlgButtonChecked(hDlg, IDC_CHK_CACHE) == BST_CHECKED);
+        SaveMRU(L"cache", chkCache ? L"1" : L"0");
+
+        exist_ok = (IsDlgButtonChecked(hDlg, IDC_CHK_EXIST_OK) == BST_CHECKED);
+        SaveMRU(L"exist_ok", exist_ok ? L"1" : L"0");
+
+        chkResume = (IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME) == BST_CHECKED);
+        SaveMRU(L"resume_chk", chkResume ? L"1" : L"0");
+
+        chkUseHyp = (IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED);
+        SaveMRU(L"hyper_chk", chkUseHyp ? L"1" : L"0");
+    }
+    else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
+    {
+        SaveMRU(L"Image Data", this->workdir); // 例: "C:\path\to\images"
+        SaveMRU(L"Label Data", this->datayaml); // 例: "C:\path\to\labels"
+        SaveMRU(L"Temp Dir", this->weights); // 例: "C:\path\to\temp"
+
+        // 分割パラメータ
+        SaveMRU(L"TrainPercent", this->epochs);  // 例: "80"
+        SaveMRU(L"Reduction", this->patience); // 例: "1.0"
+
+        // 実行ファイル／ワークスペース
+        SaveMRU(L"WorkDir", this->workdir);
+        SaveMRU(L"train.py", this->trainpy);
+        SaveMRU(L"data.yaml", this->datayaml);
+        SaveMRU(L"hyp.yaml", this->hypyaml);
+        SaveMRU(L"cfg.yaml", this->cfgyaml);
+        SaveMRU(L"weights.pt", this->weights);
+        SaveMRU(L"Python.exe", this->python);
+        SaveMRU(L"Environment", this->activate);
+        SaveMRU(L"Name", this->_NAME);
+
+        // 学習オプション
+        SaveMRU(L"epochs", this->epochs);
+        SaveMRU(L"patience", this->patience);
+        SaveMRU(L"resume", this->resume);
+        SaveMRU(L"batch", this->batch);
+        SaveMRU(L"imgsz", this->imgsz);
+		SaveMRU(L"device", this->device);
+
+        // task
+        SaveMRU(L"task", this->task); //taskは文字列 detect/segment/pose/classify
+
+		// Checkboxの状態を保存 メモリから
+        SaveMRU(L"cache", this->chkCache ? L"1" : L"0");
+        SaveMRU(L"exist_ok", this->exist_ok ? L"1" : L"0");
+        SaveMRU(L"resume_chk", this->chkResume ? L"1" : L"0");
+        SaveMRU(L"hyper_chk", this->chkUseHyp ? L"1" : L"0");
+    }
+    return 0;
 }
 
 
@@ -806,7 +903,17 @@ void TrainParams::DoTrain()
 // Build train command and launch
 //
 //////////////////////////////////////////////////////////////////////////////////////
-static void DoTrain()
+static void DoTrain(HWND hDlg)
+{
+	TrainParams _params;
+    _params.ReadControls(hDlg); // コントロールから値を読み取る
+    // ここでコマンドを実行
+    _params.DoTrain();
+    // 設定をINIに保存
+	_params.SaveCurrentSettingsToIni(nullptr); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
+}
+
+static void DoTrain_old()
 {
 	//コントロールからの値取得
     std::wstring workdir = GetText(g_hDlg, IDC_COMBO_WORKDIR);
@@ -1249,7 +1356,11 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             std::thread([]() { DoSplit(); }).detach();
         }break;
         case IDC_BTN_TRAIN: {
-            std::thread([]() { DoTrain(); }).detach();
+            //std::thread([]() { DoTrain(); }).detach();
+
+            std::thread([hDlg]() { DoTrain(hDlg); }).detach();
+
+
         }break;
         case IDC_BTN_STOP: {
             StopChild();
