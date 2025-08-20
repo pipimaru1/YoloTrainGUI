@@ -645,20 +645,160 @@ static void AddSafeDirectory(const std::wstring& dir)
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////
-// 
 // Get text from a control
-//
 //////////////////////////////////////////////////////////////////////////////////////
-struct TrainParams {
-    std::wstring backend;  // "v5" or "v8"
-    std::wstring workdir, python, activate;
-    std::wstring data_yaml, weights_or_model;
-    std::wstring epochs, patience, batch, imgsz, device, name, project, resume_path;
-    bool resume_flag, cache_flag, exist_ok_flag;
+class TrainParams {
+    std::wstring backend;  // "v5" or "v8" or "11"
+    std::wstring workdir;
+    std::wstring trainpy;
+    std::wstring datayaml;
+    std::wstring hypyaml;
+    std::wstring cfgyaml;
+    std::wstring weights;
+    std::wstring python;
+    std::wstring activate;
+    std::wstring resume; 
+    std::wstring epochs;
+    std::wstring patience;
+    std::wstring batch;
+    std::wstring imgsz;
+    std::wstring device;
+    std::wstring _NAME;
+    std::wstring project;
+
+	int chkResume = 0; // 0 or 1
+	int chkCache = 0; // 0 or 1
+	int chkUseHyp = 0; // 0 or 1
+
     // v8 only
     std::wstring task;     // detect/segment/pose/classify
+
+    TrainParams() : backend(L"v8"), workdir(L""), trainpy(L"train.py"), datayaml(L""), hypyaml(L""), cfgyaml(L""), 
+        weights(L""), python(L"python"), activate(L""), resume(L""), epochs(L"300"), patience(L"50"), batch(L"16"), imgsz(L"640"),
+		device(L"0"), _NAME(L""), project(L"runs/train"), task(L"detect")
+    {
+        chkResume = 0;
+		chkCache = 0;
+        chkUseHyp = 0;
+    }
+
+    //メソッド
+    int ReadControls(HWND hDlg);
+    void DoTrain();
+
 };
 
+int TrainParams::ReadControls(HWND hDlg)
+{
+    workdir = GetText(hDlg, IDC_COMBO_WORKDIR);
+    trainpy = GetText(hDlg, IDC_COMBO_TRAINPY);
+    datayaml = GetText(hDlg, IDC_COMBO_YAML);
+    hypyaml = GetText(hDlg, IDC_COMBO_HYP);
+    cfgyaml = GetText(hDlg, IDC_COMBO_CFG);
+    weights = GetText(hDlg, IDC_COMBO_WEIGHTS);
+    python  = GetText(hDlg, IDC_COMBO_PYTHON);
+    activate = GetText(hDlg, IDC_COMBO_ACTIVATE);
+    resume  = GetText(hDlg, IDC_CMB_RESUME);
+    epochs  = GetText(hDlg, IDC_COMBO_EPOCHS);
+    patience = GetText(hDlg, IDC_CMB_PATIENCE);
+    batch   = GetText(hDlg, IDC_COMBO_BATCHSIZE);
+    imgsz   = GetText(hDlg, IDC_COMBO_IMGSZ);
+    device  = GetText(hDlg, IDC_COMBO_DEVICE);
+    _NAME   = GetText(hDlg, IDC_COMBO_NAME);
+    project = GetText(hDlg, IDC_EDIT_PROJECT);
+
+    //チェックボックスの状態を取得
+    chkResume = IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME);
+    chkCache = IsDlgButtonChecked(hDlg, IDC_CHK_CACHE);
+    chkUseHyp = IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM);
+
+    // v8 only
+    task = L"detect"; // default
+    if (IsDlgButtonChecked(hDlg, IDC_RADIO_SEGMENT) == BST_CHECKED) {
+        task = L"segment";
+    }
+    else if (IsDlgButtonChecked(hDlg, IDC_RADIO_POSE) == BST_CHECKED) {
+        task = L"pose";
+    }
+    else if (IsDlgButtonChecked(hDlg, IDC_RADIO_CLASSIFY) == BST_CHECKED) {
+        task = L"classify";
+    }
+    return 0;
+}
+
+void TrainParams::DoTrain()
+{
+    if (python.empty()) python = L"python";
+
+    if (workdir.empty() || trainpy.empty() || datayaml.empty()) {
+        AppendLog(L"[TRAIN] workdir/train.py/data.yaml is required.");
+        AppendLog(RET);
+        return;
+    }
+
+    // Build command
+    std::wstringstream ss;
+    if (!activate.empty()) {
+        ss << L"call activate " << Quote(activate) << L" && ";
+    }
+    ss << L"cd /d " << Quote(workdir) << L" && ";
+    ss << Quote(python) << L" " << Quote(trainpy)
+        << L" --data " << Quote(datayaml);
+
+    if (!epochs.empty()) ss << L" --epochs " << epochs;
+
+    if (!patience.empty()) ss << L" --patience " << patience;
+
+    if (chkResume == BST_CHECKED)
+    {
+        if (resume.empty())
+            ss << L" --resume ";
+        else
+            ss << L" --resume " << Quote(resume);
+    }
+
+    if (!batch.empty()) ss << L" --batch " << batch;
+    if (!imgsz.empty()) ss << L" --img " << imgsz;
+    if (!device.empty()) ss << L" --device " << device;
+
+    if (chkUseHyp == BST_CHECKED)
+    {
+        if (hypyaml.empty())
+            ss << L" --hyp ";
+        else
+            ss << L" --hyp " << Quote(hypyaml);
+    }
+
+    if (!cfgyaml.empty()) ss << L" --cfg " << Quote(cfgyaml);
+    if (!weights.empty()) ss << L" --weights " << Quote(weights);
+    if (chkCache == BST_CHECKED)
+        ss << L" --cache disk";
+
+    if (!_NAME.empty()) ss << L" --name " << Quote(_NAME);
+
+    if (!project.empty()) ss << L" --project " << Quote(project);
+
+    std::wstring command = ss.str();
+    AppendLog(L"[TRAIN] " + command);
+    AppendLog(RET);
+
+    //ここでコマンドを実行
+    LaunchWithCapture(command);
+
+    // ここでコマンド履歴を追記（無制限）
+    AppendCmdHistory(command);
+
+    // MRU 保存（各セクション256件まで）
+    SaveMRU(L"WorkDir", workdir);
+    SaveMRU(L"train.py", trainpy);
+    SaveMRU(L"data.yaml", datayaml);
+    SaveMRU(L"hyp.yaml", hypyaml);
+    SaveMRU(L"cfg.yaml", cfgyaml);
+    SaveMRU(L"weights.pt", weights);
+    SaveMRU(L"Python.exe", python);
+    SaveMRU(L"Activate.bat", activate);
+    SaveMRU(L"resume", resume);
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////////

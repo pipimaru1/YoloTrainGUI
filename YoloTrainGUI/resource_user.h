@@ -17,6 +17,9 @@
 #define IDC_RAD_YOLO11            1818   // 「YOLOv8」ラジオ
 #define IDC_GRP_YOLOVERSION       1819 
 
+#define IDC_RADIO_SEGMENT	1820
+#define IDC_RADIO_POSE		1821
+#define IDC_RADIO_CLASSIFY	1822
 
 /*
 リソース追加手順
@@ -70,5 +73,8 @@
 → 固有IDに置き換える（IDC_STATIC は常に -1 の特別ID、触らない）。
 DS_SETFONT 未定義でデザイナが開かない…
 → リソース インクルードの読み取り専用に <winres.h> が入っているか再確認。
+
+
+rc /l 0x411 /v YoloTrainGUI.rc
 
 */
