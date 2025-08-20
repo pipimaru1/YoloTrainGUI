@@ -903,7 +903,7 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 // Build train command and launch
 //
 //////////////////////////////////////////////////////////////////////////////////////
-static void DoTrain(HWND hDlg)
+static void DoTrain(HWND hDlg = nullptr)
 {
 	TrainParams _params;
     _params.ReadControls(hDlg); // コントロールから値を読み取る
@@ -913,7 +913,7 @@ static void DoTrain(HWND hDlg)
 	_params.SaveCurrentSettingsToIni(nullptr); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
 }
 
-static void DoTrain_old()
+/*static void DoTrain_old()
 {
 	//コントロールからの値取得
     std::wstring workdir = GetText(g_hDlg, IDC_COMBO_WORKDIR);
@@ -1015,7 +1015,9 @@ static void DoTrain_old()
     SaveMRU(L"Activate.bat", activate);
     SaveMRU(L"resume", resume);
 }
+*/
 
+/*
 static void SaveCurrentSettingsToIni(HWND hDlg)
 {
     // 共有データ（画像／ラベル）とテンポラリ
@@ -1064,6 +1066,7 @@ static void SaveCurrentSettingsToIni(HWND hDlg)
     SaveMRU(L"hyper_chk", hyper_chk ? L"1" : L"0");
 
 }
+*/
 
 // ------------------------------
 // Dialog 初期化
@@ -1396,11 +1399,16 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
 	//	return TRUE;
 
     case WM_CLOSE:
-		SaveCurrentSettingsToIni(hDlg);
+    {
+		TrainParams _params;
+		// ここで設定をINIに保存
+		_params.SaveCurrentSettingsToIni(hDlg); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
+        //SaveCurrentSettingsToIni(hDlg);
 
         StopChild();
         EndDialog(hDlg, 0);
         return TRUE;
+    }
     }
     return FALSE;
 }
