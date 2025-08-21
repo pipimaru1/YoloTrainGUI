@@ -78,6 +78,9 @@ static std::wstring strChkEnv =
 L"Pythonの環境設定のリストを表示します。\r\n"
 L"Condaに対応しています。\r\n";
 
+static std::wstring strTipCfgYaml =
+L"不要な時は空欄にしてください。\r\n"
+L"ptファイルがあれば不要です。\r\n";
 
 void SetTootips(HWND hDlg)
 {
@@ -87,9 +90,9 @@ void SetTootips(HWND hDlg)
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"train.py", strTipTrainPy.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PYTHONEXE, L"train.py", strTipPythonExe.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WORKDIR, L"WorkDir", strTipWorkDir.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"WorkDir", strGitSafe.c_str());   
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"WorkDir", strChkEnv.c_str());
-   
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"Git Safe", strGitSafe.c_str());   
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"Python Env", strChkEnv.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_CFGYAML, L"CFG Yaml", strTipCfgYaml.c_str());
 }
 
 // ------------------------------

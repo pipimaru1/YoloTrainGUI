@@ -32,6 +32,7 @@
 #define IDC_CHK_USEPROXY            1829   // 新規追加ボタンID
 #define IDC_STC_PROXY_HTTP          1830   // 新規追加ボタンID
 #define IDC_STC_PROXY_HTTPS         1831   // 新規追加ボタンID
+#define IDC_STC_CFGYAML             1832   // 新規追加ボタンID（例：Exportボタン）
 
 /*
 リソース追加手順
