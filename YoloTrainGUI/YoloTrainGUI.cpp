@@ -699,6 +699,7 @@ class TrainParams {
 	int chkCache = 0; // 0 or 1
 	int chkUseHyp = 0; // 0 or 1
     int exist_ok = 0; // 0 or 1
+	int chkUseProxy = 0; // 0 or 1
 
     // v8 only
     std::wstring task;    // detect/segment/pose/classify
@@ -745,6 +746,7 @@ int TrainParams::ReadControls(HWND hDlg)
 	// HTTP/HTTPS プロキシ設定（v8/v11用）
 	http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
 	https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
+	chkUseProxy = IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY);
 
     //チェックボックスの状態を取得
     chkResume = IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME);
@@ -871,7 +873,14 @@ void TrainParams::DoTrain()
         return;
     }
 
+    //コマンド組立
     std::wstringstream ss;
+	//Proxy設定（v8/v11用）
+	chkUseProxy = (IsDlgButtonChecked(g_hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
+    if(chkUseProxy == BST_CHECKED) {
+        ss << L"set HTTP_PROXY=" << Quote(http_proxy) << L" && ";
+        ss << L"set HTTPS_PROXY=" << Quote(https_proxy) << L" && ";
+	}
 
     // conda/venv の有効化
     if (!activate.empty()) {
@@ -1096,6 +1105,8 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         // v8/v11 用の HTTP/HTTPS プロキシ設定
         SaveMRU(L"proxy_http", GetText(hDlg, IDC_CMB_PROXY_HTTP));
         SaveMRU(L"proxy_https", GetText(hDlg, IDC_CMB_PROXY_HTTPS));
+		chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
+        SaveMRU(L"chkUseProxy", chkUseProxy ? L"1" : L"0");
 
     }
     else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
@@ -1142,6 +1153,8 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 		// v8/v11 用の HTTP/HTTPS プロキシ設定
         SaveMRU(L"proxy_http", this->http_proxy);
 		SaveMRU(L"proxy_https", this->https_proxy);
+        SaveMRU(L"chkUseProxy", this->chkUseProxy ? L"1" : L"0");
+
     }
     return 0;
 }
@@ -1265,6 +1278,7 @@ static void InitDialog(HWND hDlg)
     CheckDlgButton(hDlg, IDC_CHK_EXIST_OK,      LoadFlagFromIni(L"exist_ok",    false) ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHECK_RESUME,      LoadFlagFromIni(L"resume_chk",  false) ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHK_USEHYPERPARAM, LoadFlagFromIni(L"hyper_chk",   false) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(hDlg, IDC_CHK_USEPROXY,      LoadFlagFromIni(L"chkUseProxy", false) ? BST_CHECKED : BST_UNCHECKED);
 
 	LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_PROJECT), L"project");
 
@@ -1515,23 +1529,28 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             }
             break;
 
-        case IDC_BTN_SETPROXY:
-        {
-            // HTTP/HTTPS プロキシの設定を保存
-            std::wstring http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
-            std::wstring https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
-            SaveMRU(L"proxy_http", http_proxy);
-            SaveMRU(L"proxy_https", https_proxy);
-            //コマンドラインで実行
-            std::wstringstream ss;
-			ss << L"set HTTPS_PROXY=" << http_proxy << L" && "
-				<< L"set HTTP_PROXY=" << https_proxy;
+        //case IDC_BTN_SETPROXY:
+        //{
+        //    if (HIWORD(wParam) == BN_CLICKED)
+        //    {
+        //            // HTTP/HTTPS プロキシの設定を保存
+        //        std::wstring http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
+        //        std::wstring https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
+        //        SaveMRU(L"proxy_http", http_proxy);
+        //        SaveMRU(L"proxy_https", https_proxy);
 
-            const std::wstring command = ss.str();
-			LaunchWithCapture(command); // コマンドラインで実行
+        //        // コマンドラインで実行
+        //        std::wstringstream ss;
+        //        // 一時的にプロセス内で有効
+        //        ss << L"set HTTP_PROXY=" << http_proxy
+        //           << L" && set HTTPS_PROXY=" << https_proxy
+        //           << L" && echo HTTP_PROXY=%HTTP_PROXY% && echo HTTPS_PROXY=%HTTPS_PROXY%";
+        //        const std::wstring command = ss.str();
+        //        LaunchWithCapture(command); // cmd.exe /C は内部で付与される
 
-            AppendLog(RET);
-		} break;
+        //        AppendLog(RET);
+        //    }
+        //} break;
 
         default:
             break;
