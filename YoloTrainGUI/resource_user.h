@@ -1,4 +1,7 @@
 ﻿#pragma once
+#define IDI_APP						201
+#define IDI_APP_SMALL				202
+
 #define IDC_CMB_PATIENCE          1801
 #define IDC_CMB_RESUME            1802
 #define IDC_CHK_EXIST_OK          1805
@@ -16,10 +19,16 @@
 #define IDC_RAD_YOLOV8            1817   // 「YOLOv8」ラジオ
 #define IDC_RAD_YOLO11            1818   // 「YOLOv8」ラジオ
 #define IDC_GRP_YOLOVERSION       1819 
+#define IDC_STC_CFG               1823
 
-#define IDC_RADIO_SEGMENT	1820
-#define IDC_RADIO_POSE		1821
-#define IDC_RADIO_CLASSIFY	1822
+#define IDC_RADIO_SEGMENT			1820
+#define IDC_RADIO_POSE				1821
+#define IDC_RADIO_CLASSIFY			1822
+#define IDC_GRP_YOLOVERSION2        1824
+#define IDC_CMB_PROXY_HTTP			1825
+#define IDC_CMB_PROXY_HTTPS			1826
+#define IDC_BTN_SETPROXY			1827
+#define IDC_BTN_NOPROXY				1828   // 新規追加ボタンID
 
 /*
 リソース追加手順

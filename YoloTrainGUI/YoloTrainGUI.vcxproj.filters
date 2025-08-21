@@ -60,6 +60,12 @@
     <Image Include="YoloTrainGUI.ico">
       <Filter>リソース ファイル</Filter>
     </Image>
+    <Image Include="robot_robotics_automated_machine_mechanical_assistant_robotic_technology_icon_260887 (1).ico">
+      <Filter>リソース ファイル</Filter>
+    </Image>
+    <Image Include="robot2_64.ico">
+      <Filter>リソース ファイル</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <None Include="mru_history.ini" />

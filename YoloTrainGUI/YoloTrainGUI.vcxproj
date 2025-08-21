@@ -159,6 +159,8 @@
     <ResourceCompile Include="YoloTrainGUI.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="robot2_64.ico" />
+    <Image Include="robot_robotics_automated_machine_mechanical_assistant_robotic_technology_icon_260887 (1).ico" />
     <Image Include="small.ico" />
     <Image Include="YoloTrainGUI.ico" />
   </ItemGroup>

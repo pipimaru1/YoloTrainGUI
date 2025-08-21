@@ -46,7 +46,8 @@ L"    └─ labels\r\n"
 L"\r\n"
 L"元データは ./TempDir/source にコピーされます。\r\n"
 L"トレーニング用と検証用に分割されると、\r\n"
-L"./TempDir/train および./TempDir/valid にコピーされます。\r\n";
+L"./TempDir/train および./TempDir/valid にコピーされます。\r\n"
+L"【注意】yolov8はRAMディスク使えません!!【注意】\r\n";
 
 static std::wstring strTipDataYaml = 
 L"クラシフィケーション定義とデータフォルダを記載します。 \r\n"
@@ -64,16 +65,31 @@ L"python.exeを指定します。\r\n"
 L"通常はパスを入れずに Python.exe とだけ記述してください。\r\n";
 
 static std::wstring strTipWorkDir =
-L"Yolov5の作業ディレクトリを指定します。\r\n"
-L"train.pyのあるディレクトリを指定してください。\r\n";
+L"Yolovの作業ディレクトリを指定します。\r\n"
+L"train.pyのあるディレクトリを指定してください。\r\n"
+L"./yolov5や./yolov8, ./yolo11 等を指定します。\r\n";
+
+static std::wstring strGitSafe =
+L"Yolo作業ディレクトリに必要なファイルを\r\n"
+L"gitでダウンロードすることがあります\r\n"
+L"このボタンを押して、gitsafe に指定してください。\r\n";
+
+static std::wstring strChkEnv =
+L"Pythonの環境設定のリストを表示します。\r\n"
+L"Condaに対応しています。\r\n";
+
 
 void SetTootips(HWND hDlg)
 {
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"Tempolary Directory", strTipTempDir.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DATA_YAML, L"Tempolary Directory", strTipDataYaml.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_EDIT_YAML, L"Tempolary Directory", strTipDataYaml.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"train.py", strTipTrainPy.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PYTHONEXE, L"train.py", strTipPythonExe.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WORKDIR, L"WorkDir", strTipWorkDir.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"WorkDir", strGitSafe.c_str());   
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"WorkDir", strChkEnv.c_str());
+   
 }
 
 // ------------------------------
@@ -281,6 +297,52 @@ static void AppendCmdHistory(const std::wstring& cmd)
     std::lock_guard<std::mutex> lk(g_storeMutex);
     std::ofstream ofs(GetHistoryFile(), std::ios::binary | std::ios::app);
     ofs.write(u8.data(), (std::streamsize)u8.size());
+}
+
+// ------------------------------
+// radioボタンヘルパー
+// ------------------------------
+// 指定ID群の Enable/Disable をまとめて行うユーティリティ
+static void EnableControls(HWND hDlg, const int* ids, size_t n, BOOL enable)
+{
+    for (size_t i = 0; i < n; ++i) {
+        if (HWND h = GetDlgItem(hDlg, ids[i])) {
+            EnableWindow(h, enable);
+        }
+    }
+}
+
+// v5専用UIの有効/無効を切替（今回グレーアウト対象の6コントロール）
+static void SetV5OnlyControlsEnabled(HWND hDlg, BOOL enable)
+{
+    const int ids[] = {
+        IDC_STC_TRAINPY,
+        IDC_COMBO_TRAINPY,
+        IDC_STC_CFG,        // 新規追加ラベル
+        IDC_COMBO_CFG,
+        IDC_STC_PYTHONEXE,
+        IDC_COMBO_PYTHON,
+        IDC_BTN_BROWSE_TRAINPY,
+        IDC_BTN_BROWSE_CFG,
+        IDC_BTN_BROWSE_PYTHON,
+        IDC_BTN_EDIT_YAML,
+        IDC_BTN_EDIT_CFG
+    };
+    EnableControls(hDlg, ids, _countof(ids), enable);
+}
+
+// ラジオ選択に応じてUIを更新
+static void UpdateBackendUI(HWND hDlg)
+{
+    const BOOL isV5 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV5) == BST_CHECKED);
+    const BOOL isV8 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV8) == BST_CHECKED);
+    const BOOL isV11 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLO11) == BST_CHECKED);
+
+    // v5専用UI → v8/11のときはグレーアウト
+    SetV5OnlyControlsEnabled(hDlg, isV5);
+
+    // 必要なら、v8専用UIの有効/無効もここで切り替え可能
+    // 例) SetV8OnlyControlsEnabled(hDlg, isV8 || isV11);
 }
 
 // ------------------------------
@@ -544,68 +606,6 @@ static std::wstring GetText(HWND hDlg, int id)
     return tmp;
 }
 
-// ------------------------------
-// Actions
-// ------------------------------
-static void DoCopyToTemp()
-{
-    std::wstring img = GetText(g_hDlg, IDC_COMBO_IMG);
-    std::wstring lab = GetText(g_hDlg, IDC_COMBO_LABEL);
-    std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
-    if (img.empty() || lab.empty() || tmp.empty()) 
-    { 
-        AppendLog(L"[COPY] Missing path."); 
-        AppendLog(RET);
-        return;
-    }
-
-    fs::path dstImages = fs::path(tmp) / "source" / "images";
-    fs::path dstLabels = fs::path(tmp) / "source" / "labels";
-
-    // Clean previous
-    try {
-        if (fs::exists(dstImages)) fs::remove_all(dstImages);
-        if (fs::exists(dstLabels)) fs::remove_all(dstLabels);
-    }
-    catch (...) {}
-
-    ResetProgress();
-    AppendLog(L"[COPY] images -> " + dstImages.wstring());
-    AppendLog(RET);
-    if (!CopyTreeWithProgress(img, dstImages)) 
-        return;
-    AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
-    AppendLog(RET);
-    if (!CopyTreeWithProgress(lab, dstLabels))
-        return;
-    SetProgress(100);
-    AppendLog(L"[COPY] Completed.");
-    AppendLog(RET);
-    SaveMRU(L"Image Data", img);
-    SaveMRU(L"Label Data", lab);
-    SaveMRU(L"Temp Dir", tmp);
-}
-static void DoSplit()
-{
-    std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
-    int trainPct = _wtoi(GetText(g_hDlg, IDC_EDIT_TRAINPCT).c_str());
-    double reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
-    if (tmp.empty() || trainPct <= 0) { 
-        AppendLog(L"[SPLIT] Missing temp or train%"); 
-        AppendLog(RET);
-        return;
-    }
-
-    fs::path src = fs::path(tmp) / "source";
-    fs::path dst = fs::path(tmp) / "dataset";
-    try { if (fs::exists(dst)) fs::remove_all(dst); }
-    catch (...) {}
-    ResetProgress();
-    AppendLog(L"[SPLIT] source=" + src.wstring() + L"   dest=" + dst.wstring());
-    AppendLog(RET);
-    SplitDataset(src, dst, trainPct, reduc);   // based on your divfiles.cpp  :contentReference[oaicite:2]{index=2}
-    SetProgress(100);
-}
 
 //////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -662,11 +662,13 @@ static void AddSafeDirectory(const std::wstring& dir)
         CloseHandle(pi.hProcess);
         //MessageBoxW(NULL, L"safe.directory に追加しました。", L"Git設定", MB_OK | MB_ICONINFORMATION);
 		AppendLog(L"[GIT] safe.directory に追加しました。");
+        AppendLog(RET);
     }
     else
     {
         //MessageBoxW(NULL, L"git の実行に失敗しました。PATH設定を確認してください。", L"Git設定", MB_OK | MB_ICONERROR);
 		AppendLog(L"[GIT] git の実行に失敗しました。PATH設定を確認してください。");
+        AppendLog(RET);
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////
@@ -689,6 +691,9 @@ class TrainParams {
     std::wstring device;
     std::wstring _NAME;
     std::wstring project;
+
+	std::wstring http_proxy; // HTTP プロキシ設定（v8/v11用）
+    std::wstring https_proxy; // HTTPS プロキシ設定（v8/v11用）
 
 	int chkResume = 0; // 0 or 1
 	int chkCache = 0; // 0 or 1
@@ -736,6 +741,10 @@ int TrainParams::ReadControls(HWND hDlg)
     device  = GetText(hDlg, IDC_COMBO_DEVICE);
     _NAME   = GetText(hDlg, IDC_COMBO_NAME);
     project = GetText(hDlg, IDC_EDIT_PROJECT);
+
+	// HTTP/HTTPS プロキシ設定（v8/v11用）
+	http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
+	https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
 
     //チェックボックスの状態を取得
     chkResume = IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME);
@@ -916,7 +925,8 @@ void TrainParams::DoTrain()
         }
 
         // 既定は "python -m ultralytics"。yolo コマンドが PATH にあるなら差し替えたい場合はここで検出して置換も可。
-        ss << Quote(python) << L" -m ultralytics "
+        //ss << Quote(python) << L" -m ultralytics "
+        ss << L"yolo "
             << task << L" train"
             << L" data=" << Quote(datayaml);
 
@@ -949,6 +959,70 @@ void TrainParams::DoTrain()
     AppendCmdHistory(command);                   // 履歴へ追記
     SaveCurrentSettingsToIni(nullptr);           // MRU保存}
 }
+
+// ------------------------------
+// Actions
+// ------------------------------
+static void DoCopyToTemp()
+{
+    std::wstring img = GetText(g_hDlg, IDC_COMBO_IMG);
+    std::wstring lab = GetText(g_hDlg, IDC_COMBO_LABEL);
+    std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
+    if (img.empty() || lab.empty() || tmp.empty())
+    {
+        AppendLog(L"[COPY] Missing path.");
+        AppendLog(RET);
+        return;
+    }
+
+    fs::path dstImages = fs::path(tmp) / "source" / "images";
+    fs::path dstLabels = fs::path(tmp) / "source" / "labels";
+
+    // Clean previous
+    try {
+        if (fs::exists(dstImages)) fs::remove_all(dstImages);
+        if (fs::exists(dstLabels)) fs::remove_all(dstLabels);
+    }
+    catch (...) {}
+
+    ResetProgress();
+    AppendLog(L"[COPY] images -> " + dstImages.wstring());
+    AppendLog(RET);
+    if (!CopyTreeWithProgress(img, dstImages))
+        return;
+    AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
+    AppendLog(RET);
+    if (!CopyTreeWithProgress(lab, dstLabels))
+        return;
+    SetProgress(100);
+    AppendLog(L"[COPY] Completed.");
+    AppendLog(RET);
+    SaveMRU(L"Image Data", img);
+    SaveMRU(L"Label Data", lab);
+    SaveMRU(L"Temp Dir", tmp);
+}
+static void DoSplit()
+{
+    std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
+    int trainPct = _wtoi(GetText(g_hDlg, IDC_EDIT_TRAINPCT).c_str());
+    double reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
+    if (tmp.empty() || trainPct <= 0) {
+        AppendLog(L"[SPLIT] Missing temp or train%");
+        AppendLog(RET);
+        return;
+    }
+
+    fs::path src = fs::path(tmp) / "source";
+    fs::path dst = fs::path(tmp) / "dataset";
+    try { if (fs::exists(dst)) fs::remove_all(dst); }
+    catch (...) {}
+    ResetProgress();
+    AppendLog(L"[SPLIT] source=" + src.wstring() + L"   dest=" + dst.wstring());
+    AppendLog(RET);
+    SplitDataset(src, dst, trainPct, reduc);   // based on your divfiles.cpp  :contentReference[oaicite:2]{index=2}
+    SetProgress(100);
+}
+
 
 /////////////////////////////////////////////////////////////////
 // 
@@ -1019,6 +1093,10 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
             SaveMRU(L"backend", L"YOLOV5");
 		}
 
+        // v8/v11 用の HTTP/HTTPS プロキシ設定
+        SaveMRU(L"proxy_http", GetText(hDlg, IDC_CMB_PROXY_HTTP));
+        SaveMRU(L"proxy_https", GetText(hDlg, IDC_CMB_PROXY_HTTPS));
+
     }
     else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
     {
@@ -1060,6 +1138,10 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 
 		// Yolov5,yolov8, yolo11ラジオボタンの状態を保存
         SaveMRU(L"backend", this->backend);
+
+		// v8/v11 用の HTTP/HTTPS プロキシ設定
+        SaveMRU(L"proxy_http", this->http_proxy);
+		SaveMRU(L"proxy_https", this->https_proxy);
     }
     return 0;
 }
@@ -1147,6 +1229,9 @@ static void InitDialog(HWND hDlg)
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_CMB_PATIENCE),      L"patience");
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_CMB_RESUME),        L"resume");
 
+	LoadMRUToCombo(GetDlgItem(hDlg, IDC_CMB_PROXY_HTTP), L"proxy_http");
+	LoadMRUToCombo(GetDlgItem(hDlg, IDC_CMB_PROXY_HTTPS), L"proxy_https");
+
     // ★ 先頭を表示（空なら何もしない）
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_IMG));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_LABEL));
@@ -1168,6 +1253,9 @@ static void InitDialog(HWND hDlg)
 
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_PATIENCE));
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_RESUME));
+
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_PROXY_HTTP));
+	ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_PROXY_HTTPS));
 
     // 規定値
     SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
@@ -1193,6 +1281,9 @@ static void InitDialog(HWND hDlg)
     else {
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5); // default
 	}
+
+    //グレーアウトしたりする
+    UpdateBackendUI(hDlg);
 
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
@@ -1414,6 +1505,33 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             }
         }
         break;
+
+        case IDC_RAD_YOLOV5:
+        case IDC_RAD_YOLOV8:
+        case IDC_RAD_YOLO11:
+            if (HIWORD(wParam) == BN_CLICKED) {
+                UpdateBackendUI(hDlg);
+                return TRUE;
+            }
+            break;
+
+        case IDC_BTN_SETPROXY:
+        {
+            // HTTP/HTTPS プロキシの設定を保存
+            std::wstring http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
+            std::wstring https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
+            SaveMRU(L"proxy_http", http_proxy);
+            SaveMRU(L"proxy_https", https_proxy);
+            //コマンドラインで実行
+            std::wstringstream ss;
+			ss << L"set HTTPS_PROXY=" << http_proxy << L" && "
+				<< L"set HTTP_PROXY=" << https_proxy;
+
+            const std::wstring command = ss.str();
+			LaunchWithCapture(command); // コマンドラインで実行
+
+            AppendLog(RET);
+		} break;
 
         default:
             break;
