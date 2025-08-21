@@ -30,6 +30,8 @@
 #define IDC_BTN_SETPROXY			1827
 #define IDC_BTN_NOPROXY				1828   // 新規追加ボタンID
 #define IDC_CHK_USEPROXY            1829   // 新規追加ボタンID
+#define IDC_STC_PROXY_HTTP          1830   // 新規追加ボタンID
+#define IDC_STC_PROXY_HTTPS         1831   // 新規追加ボタンID
 
 /*
 リソース追加手順

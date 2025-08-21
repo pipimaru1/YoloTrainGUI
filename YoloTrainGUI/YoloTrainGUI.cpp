@@ -313,36 +313,58 @@ static void EnableControls(HWND hDlg, const int* ids, size_t n, BOOL enable)
 }
 
 // v5専用UIの有効/無効を切替（今回グレーアウト対象の6コントロール）
-static void SetV5OnlyControlsEnabled(HWND hDlg, BOOL enable)
-{
-    const int ids[] = {
-        IDC_STC_TRAINPY,
-        IDC_COMBO_TRAINPY,
-        IDC_STC_CFG,        // 新規追加ラベル
-        IDC_COMBO_CFG,
-        IDC_STC_PYTHONEXE,
-        IDC_COMBO_PYTHON,
-        IDC_BTN_BROWSE_TRAINPY,
-        IDC_BTN_BROWSE_CFG,
-        IDC_BTN_BROWSE_PYTHON,
-        IDC_BTN_EDIT_YAML,
-        IDC_BTN_EDIT_CFG
-    };
-    EnableControls(hDlg, ids, _countof(ids), enable);
-}
+//static void SetV5OnlyControlsEnabled(HWND hDlg, BOOL enable)
+//{
+//    const int ids[] = {
+//        IDC_STC_TRAINPY,
+//        IDC_COMBO_TRAINPY,
+//        IDC_STC_CFG,        // 新規追加ラベル
+//        IDC_COMBO_CFG,
+//        IDC_STC_PYTHONEXE,
+//        IDC_COMBO_PYTHON,
+//        IDC_BTN_BROWSE_TRAINPY,
+//        IDC_BTN_BROWSE_CFG,
+//        IDC_BTN_BROWSE_PYTHON,
+//        IDC_BTN_EDIT_YAML,
+//        IDC_BTN_EDIT_CFG
+//    };
+//    EnableControls(hDlg, ids, _countof(ids), enable);
+//}
 
 // ラジオ選択に応じてUIを更新
 static void UpdateBackendUI(HWND hDlg)
 {
     const BOOL isV5 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV5) == BST_CHECKED);
-    const BOOL isV8 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV8) == BST_CHECKED);
-    const BOOL isV11 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLO11) == BST_CHECKED);
+    //const BOOL isV8 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV8) == BST_CHECKED);
+    //const BOOL isV11 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLO11) == BST_CHECKED);
 
     // v5専用UI → v8/11のときはグレーアウト
-    SetV5OnlyControlsEnabled(hDlg, isV5);
-
-    // 必要なら、v8専用UIの有効/無効もここで切り替え可能
-    // 例) SetV8OnlyControlsEnabled(hDlg, isV8 || isV11);
+    //SetV5OnlyControlsEnabled(hDlg, isV5);
+    const int ids[] = {
+    IDC_STC_TRAINPY,
+    IDC_COMBO_TRAINPY,
+    IDC_STC_CFG,        // 新規追加ラベル
+    IDC_COMBO_CFG,
+    IDC_STC_PYTHONEXE,
+    IDC_COMBO_PYTHON,
+    IDC_BTN_BROWSE_TRAINPY,
+    IDC_BTN_BROWSE_CFG,
+    IDC_BTN_BROWSE_PYTHON,
+    IDC_BTN_EDIT_YAML,
+    IDC_BTN_EDIT_CFG
+    };
+    EnableControls(hDlg, ids, _countof(ids), isV5);
+}
+static void UpdateProxyUI(HWND hDlg)
+{
+	bool chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
+    const int ids[] = {
+    IDC_STC_PROXY_HTTP,
+    IDC_STC_PROXY_HTTPS,
+    IDC_CMB_PROXY_HTTP,
+    IDC_CMB_PROXY_HTTPS
+	};
+    EnableControls(hDlg, ids, _countof(ids), chkUseProxy);
 }
 
 // ------------------------------
@@ -878,9 +900,11 @@ void TrainParams::DoTrain()
 	//Proxy設定（v8/v11用）
 	chkUseProxy = (IsDlgButtonChecked(g_hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
     if(chkUseProxy == BST_CHECKED) {
-        ss << L"set HTTP_PROXY=" << Quote(http_proxy) << L" && ";
-        ss << L"set HTTPS_PROXY=" << Quote(https_proxy) << L" && ";
-	}
+        ss << L"set HTTP_PROXY="  << http_proxy  << L" && ";
+        ss << L"set HTTPS_PROXY=" << https_proxy << L" && ";
+        ss << L"set http_proxy="  << http_proxy  << L" && ";
+        ss << L"set https_proxy=" << https_proxy << L" && ";
+    }
 
     // conda/venv の有効化
     if (!activate.empty()) {
@@ -1298,6 +1322,7 @@ static void InitDialog(HWND hDlg)
 
     //グレーアウトしたりする
     UpdateBackendUI(hDlg);
+    UpdateProxyUI(hDlg);
 
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
@@ -1529,6 +1554,14 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             }
             break;
 
+        case IDC_CHK_USEPROXY:
+        {
+            if (HIWORD(wParam) == BN_CLICKED)
+            {
+                UpdateProxyUI(hDlg);
+                return TRUE;
+            }
+		} break;
         //case IDC_BTN_SETPROXY:
         //{
         //    if (HIWORD(wParam) == BN_CLICKED)
