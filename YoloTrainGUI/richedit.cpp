@@ -160,32 +160,34 @@ void LogAppendANSI(const std::wstring& s)
             }
             continue;
         }
-        //if (c == L'\r') {
-        //    // キャリッジリターン：次の出力で最終行を置換
-        //    flush(crMode); // 現在のチャンクはここまでで出す
-        //    crMode = true;
-        //    continue;
-        //}
-        //if (c == L'\n') {
-        //    // 改行 → まとめて出力
-        //    chunk.push_back(L'\n');
-        //    flush(crMode);
-        //    crMode = false;
-        //    continue;
-        //}
-        //if (c == L'\r') {
-        //    // いままでの内容で"上書き"確定
-        //    flush(true);               // ★ここを常に置換で出すのがポイント
-        //    crMode = true;             // 次の文字列も"置換対象"として扱う
-        //    // 直後が LF なら CRLF → 改行確定として扱う（置換ではない）
-        //    if (i + 1 < s.size() && s[i + 1] == L'\n') {
-        //        // 改行を append で確定（空行を作らないため chunk は使わない）
-        //        RichAppend(hRe, L"\n", st);
-        //        crMode = false;
-        //        ++i;                    // LF を消費
-        //    }
-        //    continue;
-        //}
+#if(0)
+        if (c == L'\r') {
+            // キャリッジリターン：次の出力で最終行を置換
+            flush(crMode); // 現在のチャンクはここまでで出す
+            crMode = true;
+            continue;
+        }
+        if (c == L'\n') {
+            // 改行 → まとめて出力
+            chunk.push_back(L'\n');
+            flush(crMode);
+            crMode = false;
+            continue;
+        }
+#else
+        if (c == L'\r') {
+            // いままでの内容で"上書き"確定
+            flush(true);               // ★ここを常に置換で出すのがポイント
+            crMode = true;             // 次の文字列も"置換対象"として扱う
+            // 直後が LF なら CRLF → 改行確定として扱う（置換ではない）
+            if (i + 1 < s.size() && s[i + 1] == L'\n') {
+                // 改行を append で確定（空行を作らないため chunk は使わない）
+                RichAppend(hRe, L"\n", st);
+                crMode = false;
+                ++i;                    // LF を消費
+            }
+            continue;
+        }
         if (c == L'\n') {
             // 「次に入ってくる可視テキストを最終行に置換する」フラグだけ立てる
             // ここでは出力しない（断片化による余分な改行を防ぐ）
@@ -200,18 +202,10 @@ void LogAppendANSI(const std::wstring& s)
             }
             continue;
         }
-
-        if (c == L'\n') {
-            // 素直に改行で確定
-            chunk.push_back(L'\n');
-            flush(false);              // append
-            crMode = false;
-            continue;
-        }
+#endif
 
         chunk.push_back(c);
     }
-    //flush(crMode);
     flush(crMode);
 }
 
