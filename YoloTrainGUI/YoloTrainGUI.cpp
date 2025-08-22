@@ -540,6 +540,7 @@ static void SplitDataset(const fs::path& sourceRoot, const fs::path& destRoot,
         L" used=" + std::to_wstring(used) +
         L" train=" + std::to_wstring(nTrain) +
         L" valid=" + std::to_wstring(used - nTrain));
+	AppendLog(RET);
 }
 
 // ------------------------------
@@ -579,11 +580,13 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull)
         while (ReadFile(hRead, buf, sizeof(buf) - 1, &n, nullptr) && n > 0) {
             buf[n] = 0;
             // Convert to UTF-16 (best-effort)
-            int wlen = MultiByteToWideChar(CP_UTF8, 0, buf, n, nullptr, 0);
+            //int wlen = MultiByteToWideChar(CP_UTF8, 0, buf, n, nullptr, 0);
+            int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, buf, n, nullptr, 0);
             std::wstring ws;
             if (wlen > 0) {
                 ws.resize(wlen);
-                MultiByteToWideChar(CP_UTF8, 0, buf, n, ws.data(), wlen);
+                //MultiByteToWideChar(CP_UTF8, 0, buf, n, ws.data(), wlen);
+                MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, buf, n, ws.data(), wlen);
             }
             else {
                 int wlen2 = MultiByteToWideChar(CP_ACP, 0, buf, n, nullptr, 0);
@@ -700,6 +703,13 @@ static void AddSafeDirectory(const std::wstring& dir)
 // Get text from a control
 //////////////////////////////////////////////////////////////////////////////////////
 class TrainParams {
+    std::wstring src_dir;
+    std::wstring src_dir_image;
+	std::wstring src_dir_label;
+
+    std::wstring trainPct;
+    std::wstring reduc;
+
     std::wstring workdir;
     std::wstring trainpy;
     std::wstring datayaml;
@@ -731,7 +741,7 @@ class TrainParams {
 	std::wstring backend; // "YOLOV5" or "YOLOV8" or "YOLO11"
 
 public:
-    TrainParams() : backend(L"v8"), workdir(L""), trainpy(L"train.py"), datayaml(L""), hypyaml(L""), cfgyaml(L""), 
+    TrainParams() : backend(L"yolov5"), workdir(L""), trainpy(L"train.py"), datayaml(L""), hypyaml(L""), cfgyaml(L""), 
         weights(L""), python(L"python"), activate(L""), resume(L""), epochs(L"300"), patience(L"50"), batch(L"16"), imgsz(L"640"),
 		device(L"0"), _NAME(L""), project(L"runs/train"), task(L"detect")
     {
@@ -751,6 +761,11 @@ public:
 
 int TrainParams::ReadControls(HWND hDlg)
 {
+
+    src_dir =       GetText(hDlg, IDC_COMBO_TEMP);
+    src_dir_image = GetText(hDlg, IDC_COMBO_IMG);
+    src_dir_label = GetText(hDlg, IDC_COMBO_LABEL);
+
     workdir = GetText(hDlg, IDC_COMBO_WORKDIR);
     trainpy = GetText(hDlg, IDC_COMBO_TRAINPY);
     datayaml = GetText(hDlg, IDC_COMBO_YAML);
@@ -900,6 +915,9 @@ void TrainParams::DoTrain()
 
     //コマンド組立
     std::wstringstream ss;
+    // ① まず UTF-8 に統一
+    //ss << L"chcp 65001>nul && set PYTHONUTF8=1 && set PYTHONIOENCODING=utf-8 && ";
+
 	//Proxy設定（v8/v11用）
 	chkUseProxy = (IsDlgButtonChecked(g_hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
     if(chkUseProxy == BST_CHECKED) {
@@ -993,7 +1011,7 @@ void TrainParams::DoTrain()
     // 実行（既存の外部プロセス起動＋標準出力をRichEditに反映）
     LaunchWithCapture(command);                  // 進捗・ANSI対応のログ表示あり
     AppendCmdHistory(command);                   // 履歴へ追記
-    SaveCurrentSettingsToIni(nullptr);           // MRU保存}
+    //SaveCurrentSettingsToIni(nullptr);           // MRU保存}
 }
 
 // ------------------------------
@@ -1041,7 +1059,7 @@ static void DoSplit()
 {
     std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
     int trainPct = _wtoi(GetText(g_hDlg, IDC_EDIT_TRAINPCT).c_str());
-    double reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
+    float reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
     if (tmp.empty() || trainPct <= 0) {
         AppendLog(L"[SPLIT] Missing temp or train%");
         AppendLog(RET);
@@ -1138,12 +1156,12 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
     }
     else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
     {
-        SaveMRU(L"Image Data", this->workdir); // 例: "C:\path\to\images"
-        SaveMRU(L"Label Data", this->datayaml); // 例: "C:\path\to\labels"
-        SaveMRU(L"Temp Dir", this->weights); // 例: "C:\path\to\temp"
+        SaveMRU(L"Image Data", this->src_dir_image); // 例: "C:\path\to\images"
+        SaveMRU(L"Label Data", this->src_dir_label); // 例: "C:\path\to\labels"
+        SaveMRU(L"Temp Dir", this->src_dir); // 例: "C:\path\to\temp"
 
         // 分割パラメータ
-        SaveMRU(L"TrainPercent", this->epochs);  // 例: "80"
+        SaveMRU(L"TrainPercent", this->trainPct);  // 例: "80"
         SaveMRU(L"Reduction", this->patience); // 例: "1.0"
 
         // 実行ファイル／ワークスペース
@@ -1199,7 +1217,7 @@ static void DoTrain(HWND hDlg = nullptr)
     // ここでコマンドを実行
     _params.DoTrain();
     // 設定をINIに保存
-	_params.SaveCurrentSettingsToIni(nullptr); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
+	_params.SaveCurrentSettingsToIni(hDlg); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
 }
 
 
@@ -1243,6 +1261,31 @@ static void ShowFirstListItem(HWND hList)
 static void InitDialog(HWND hDlg)
 {
     g_hDlg = hDlg;
+
+	// LOGボックスの初期化
+    HWND hLog = GetDlgItem(hDlg, IDC_LOG);
+    // 1) プレーンテキストモード（CR/LFの扱いを安定化）
+    //    ※コントロールが空のうちに行う必要あり
+    SendMessageW(hLog, EM_SETTEXTMODE, TM_PLAINTEXT, 0);
+    // 2) ワードラップ無効化（横方向に伸ばす）
+    //    EM_SETTARGETDEVICE(NULL, 1) で折り返しなし
+    SendMessageW(hLog, EM_SETTARGETDEVICE, (WPARAM)NULL, (LPARAM)1);
+    // 3) 横スクロールバーを出す（任意）
+    LONG_PTR st = GetWindowLongPtrW(hLog, GWL_STYLE);
+    st |= WS_HSCROLL | ES_AUTOHSCROLL;    // 既存: WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY
+    SetWindowLongPtrW(hLog, GWL_STYLE, st);
+    // 4) テキスト上限を拡大（任意：既定が小さい環境の保険）
+    SendMessageW(hLog, EM_EXLIMITTEXT, 0, 16 * 1024 * 1024);  // 16MB
+    // 5) 等幅フォントを既定に（日本語も等幅にしたいので MS ゴシック推奨）
+    CHARFORMAT2 cf{}; cf.cbSize = sizeof(cf);
+    cf.dwMask = CFM_FACE | CFM_SIZE;
+    cf.yHeight = 200; // 10pt（お好みで）
+    lstrcpynW(cf.szFaceName, L"ＭＳ ゴシック", _countof(cf.szFaceName));
+    SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    // ※欧文専用で良ければ "Consolas" でもOK（日本語は等幅になりません）
+    // lstrcpynW(cf.szFaceName, L"Consolas", _countof(cf.szFaceName));
+    // SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+
     
     SendDlgItemMessageW(hDlg, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
     ResetProgress();
