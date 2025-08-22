@@ -173,17 +173,30 @@ void LogAppendANSI(const std::wstring& s)
         //    crMode = false;
         //    continue;
         //}
-        if (c == L'\r') {
-            // いままでの内容で"上書き"確定
-            flush(true);               // ★ここを常に置換で出すのがポイント
-            crMode = true;             // 次の文字列も"置換対象"として扱う
-
-            // 直後が LF なら CRLF → 改行確定として扱う（置換ではない）
+        //if (c == L'\r') {
+        //    // いままでの内容で"上書き"確定
+        //    flush(true);               // ★ここを常に置換で出すのがポイント
+        //    crMode = true;             // 次の文字列も"置換対象"として扱う
+        //    // 直後が LF なら CRLF → 改行確定として扱う（置換ではない）
+        //    if (i + 1 < s.size() && s[i + 1] == L'\n') {
+        //        // 改行を append で確定（空行を作らないため chunk は使わない）
+        //        RichAppend(hRe, L"\n", st);
+        //        crMode = false;
+        //        ++i;                    // LF を消費
+        //    }
+        //    continue;
+        //}
+        if (c == L'\n') {
+            // 「次に入ってくる可視テキストを最終行に置換する」フラグだけ立てる
+            // ここでは出力しない（断片化による余分な改行を防ぐ）
+            crMode = true;
+            // もし直後が LF なら「本物の改行」なので確定させる
             if (i + 1 < s.size() && s[i + 1] == L'\n') {
-                // 改行を append で確定（空行を作らないため chunk は使わない）
+                // 直前までのチャンクを通常出力
+                flush(false);              // append（\rフラグはここでクリア）
                 RichAppend(hRe, L"\n", st);
                 crMode = false;
-                ++i;                    // LF を消費
+                ++i; // LF を消費
             }
             continue;
         }
@@ -198,6 +211,7 @@ void LogAppendANSI(const std::wstring& s)
 
         chunk.push_back(c);
     }
+    //flush(crMode);
     flush(crMode);
 }
 

@@ -835,7 +835,7 @@ void TrainParams::DoTrain_old()
         ss << L"call activate " << Quote(activate) << L" && ";
     }
     ss << L"cd /d " << Quote(workdir) << L" && ";
-    ss << Quote(python) << L" " << Quote(trainpy)
+    ss << Quote(python) << L" -u " << Quote(trainpy)
         << L" --data " << Quote(datayaml);
 
     if (!epochs.empty()) ss << L" --epochs " << epochs;
@@ -1284,7 +1284,7 @@ static void InitDialog(HWND hDlg)
     // 5) 等幅フォントを既定に（日本語も等幅にしたいので MS ゴシック推奨）
     CHARFORMAT2 cf{}; cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE;
-    cf.yHeight = 160; // 10pt（お好みで）
+    cf.yHeight = 180; // 10pt（お好みで）
     lstrcpynW(cf.szFaceName, L"ＭＳ ゴシック", _countof(cf.szFaceName));
     SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
     // ※欧文専用で良ければ "Consolas" でもOK（日本語は等幅になりません）
