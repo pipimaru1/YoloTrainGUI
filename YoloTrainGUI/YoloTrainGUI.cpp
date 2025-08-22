@@ -707,8 +707,8 @@ class TrainParams {
     std::wstring src_dir_image;
 	std::wstring src_dir_label;
 
-    std::wstring trainPct;
-    std::wstring reduc;
+    std::wstring RatioTrain;
+	std::wstring RatioUse; //for Hyperparameter tuning データを減らしたい時に使う
 
     std::wstring workdir;
     std::wstring trainpy;
@@ -759,12 +759,17 @@ public:
 
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// 現在の設定を INI ファイルに保存
 int TrainParams::ReadControls(HWND hDlg)
 {
 
     src_dir =       GetText(hDlg, IDC_COMBO_TEMP);
     src_dir_image = GetText(hDlg, IDC_COMBO_IMG);
     src_dir_label = GetText(hDlg, IDC_COMBO_LABEL);
+
+	RatioTrain = GetText(hDlg, IDC_EDIT_TRAINPCT);
+	RatioUse = GetText(hDlg, IDC_EDIT_REDUCTION); 
 
     workdir = GetText(hDlg, IDC_COMBO_WORKDIR);
     trainpy = GetText(hDlg, IDC_COMBO_TRAINPY);
@@ -1161,8 +1166,8 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         SaveMRU(L"Temp Dir", this->src_dir); // 例: "C:\path\to\temp"
 
         // 分割パラメータ
-        SaveMRU(L"TrainPercent", this->trainPct);  // 例: "80"
-        SaveMRU(L"Reduction", this->patience); // 例: "1.0"
+        SaveMRU(L"TrainPercent", this->RatioTrain);  // 例: "80"
+        SaveMRU(L"Reduction", this->RatioUse ); // 例: "1.0"
 
         // 実行ファイル／ワークスペース
         SaveMRU(L"WorkDir", this->workdir);
@@ -1279,7 +1284,7 @@ static void InitDialog(HWND hDlg)
     // 5) 等幅フォントを既定に（日本語も等幅にしたいので MS ゴシック推奨）
     CHARFORMAT2 cf{}; cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE;
-    cf.yHeight = 200; // 10pt（お好みで）
+    cf.yHeight = 160; // 10pt（お好みで）
     lstrcpynW(cf.szFaceName, L"ＭＳ ゴシック", _countof(cf.szFaceName));
     SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
     // ※欧文専用で良ければ "Consolas" でもOK（日本語は等幅になりません）
