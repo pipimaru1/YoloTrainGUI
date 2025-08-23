@@ -8,9 +8,11 @@
 #pragma comment(lib, "Uuid.lib")
 #pragma comment(lib, "Comctl32.lib")
 
+#include "tools.hpp"
 
 #include "resource.h"
 #include "resource_user.h"
+
 #include "YoloTrainGUI.h"
 #include "Tooltip.hpp"
 
@@ -256,19 +258,18 @@ static void LoadMRUToTextControl(HWND hEditText, const std::wstring& section)
 }
 
 //単純に文字列を
-std::wstring LoadMRUToString(HWND hEditText, const std::wstring& section)
+//std::wstring LoadMRUToString(HWND hEditText, const std::wstring& section)
+std::wstring LoadMRUToString(const std::wstring& section)
 {
 	std::wstring s = L"";
     auto v = LoadMRU(section);
-    if (!v.empty()) {
+    if (!v.empty()) 
+    {
         std::wstring s = v.front(); // 先頭要素を採用
         return s;
     }
     return s;
 }
-
-
-
 
 // --- Flags loader for simple 0/1 states in mru_history.ini ---
 static bool LoadFlagFromIni(const wchar_t* key, bool def = false)
@@ -370,59 +371,19 @@ static void UpdateProxyUI(HWND hDlg)
     EnableControls(hDlg, ids, _countof(ids), chkUseProxy);
 }
 
-// ------------------------------
-// ComboBox helpers
-// ------------------------------
-static std::wstring GetComboText(HWND hCombo)
+static void UpdateHyperUI(HWND hDlg)
 {
-    int len = (int)SendMessageW(hCombo, WM_GETTEXTLENGTH, 0, 0);
-    std::wstring s(len, L'\0');
-    SendMessageW(hCombo, WM_GETTEXT, len + 1, (LPARAM)s.data());
-    return s;
-}
-static void SetComboText(HWND hCombo, const std::wstring& s)
-{
-    SendMessageW(hCombo, WM_SETTEXT, 0, (LPARAM)s.c_str());
+    const BOOL isUseHyp = (IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED);
+    const int ids[] = {
+        IDC_COMBO_HYP,
+        IDC_BTN_BROWSE_HYP,
+        IDC_BTN_EDIT_HYP
+    };
+    EnableControls(hDlg, ids, _countof(ids), isUseHyp);
 }
 
-// IFileDialog helpers
-static bool PickFolder(HWND owner, std::wstring& outPath)
-{
-    IFileDialog* pfd = nullptr;
-    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
-    if (FAILED(hr)) return false;
-    DWORD opts = 0; pfd->GetOptions(&opts);
-    pfd->SetOptions(opts | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
-    hr = pfd->Show(owner);
-    if (FAILED(hr)) { pfd->Release(); return false; }
-    IShellItem* psi = nullptr;
-    hr = pfd->GetResult(&psi);
-    if (FAILED(hr)) { pfd->Release(); return false; }
-    PWSTR psz = nullptr;
-    psi->GetDisplayName(SIGDN_FILESYSPATH, &psz);
-    if (psz) { outPath = psz; CoTaskMemFree(psz); }
-    psi->Release();
-    pfd->Release();
-    return !outPath.empty();
-}
-static bool PickFile(HWND owner, const COMDLG_FILTERSPEC* spec, UINT nSpec, std::wstring& outPath)
-{
-    IFileDialog* pfd = nullptr;
-    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
-    if (FAILED(hr)) return false;
-    pfd->SetFileTypes(nSpec, spec);
-    hr = pfd->Show(owner);
-    if (FAILED(hr)) { pfd->Release(); return false; }
-    IShellItem* psi = nullptr;
-    hr = pfd->GetResult(&psi);
-    if (FAILED(hr)) { pfd->Release(); return false; }
-    PWSTR psz = nullptr;
-    psi->GetDisplayName(SIGDN_FILESYSPATH, &psz);
-    if (psz) { outPath = psz; CoTaskMemFree(psz); }
-    psi->Release();
-    pfd->Release();
-    return !outPath.empty();
-}
+// ------------------------------
+// ------------------------------
 
 // Count files recursively
 static uint64_t CountFiles(const fs::path& root)
@@ -699,65 +660,6 @@ static void AddSafeDirectory(const std::wstring& dir)
         AppendLog(RET);
     }
 }
-//////////////////////////////////////////////////////////////////////////////////////
-// Get text from a control
-//////////////////////////////////////////////////////////////////////////////////////
-class TrainParams {
-    std::wstring src_dir;
-    std::wstring src_dir_image;
-	std::wstring src_dir_label;
-
-    std::wstring RatioTrain;
-	std::wstring RatioUse; //for Hyperparameter tuning データを減らしたい時に使う
-
-    std::wstring workdir;
-    std::wstring trainpy;
-    std::wstring datayaml;
-    std::wstring hypyaml;
-    std::wstring cfgyaml;
-    std::wstring weights;
-    std::wstring python;
-    std::wstring activate;
-    std::wstring resume; 
-    std::wstring epochs;
-    std::wstring patience;
-    std::wstring batch;
-    std::wstring imgsz;
-    std::wstring device;
-    std::wstring _NAME;
-    std::wstring project;
-
-	std::wstring http_proxy; // HTTP プロキシ設定（v8/v11用）
-    std::wstring https_proxy; // HTTPS プロキシ設定（v8/v11用）
-
-	int chkResume = 0; // 0 or 1
-	int chkCache = 0; // 0 or 1
-	int chkUseHyp = 0; // 0 or 1
-    int exist_ok = 0; // 0 or 1
-	int chkUseProxy = 0; // 0 or 1
-
-    // v8 only
-    std::wstring task;    // detect/segment/pose/classify
-	std::wstring backend; // "YOLOV5" or "YOLOV8" or "YOLO11"
-
-public:
-    TrainParams() : backend(L"yolov5"), workdir(L""), trainpy(L"train.py"), datayaml(L""), hypyaml(L""), cfgyaml(L""), 
-        weights(L""), python(L"python"), activate(L""), resume(L""), epochs(L"300"), patience(L"50"), batch(L"16"), imgsz(L"640"),
-		device(L"0"), _NAME(L""), project(L"runs/train"), task(L"detect")
-    {
-        chkResume = 0;
-		chkCache = 0;
-        chkUseHyp = 0;
-		exist_ok = 0; 
-    }
-
-    //メソッド
-    int ReadControls(HWND hDlg);
-    int SaveCurrentSettingsToIni(HWND hDlg);
-    void DoTrain();
-    void DoTrain_old();
-
-};
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // 現在の設定を INI ファイルに保存
@@ -819,6 +721,7 @@ int TrainParams::ReadControls(HWND hDlg)
 // Python スクリプトを呼び出す
 //
 /////////////////////////////////////////////////////////////
+/*
 void TrainParams::DoTrain_old()
 {
     if (python.empty()) python = L"python";
@@ -884,6 +787,8 @@ void TrainParams::DoTrain_old()
     // MRU 保存（各セクション256件まで）
     SaveCurrentSettingsToIni(nullptr);
 }
+*/
+
 /////////////////////////////////////////////////////////////
 // 
 // トレーニング実行
@@ -1060,6 +965,7 @@ static void DoCopyToTemp()
     SaveMRU(L"Label Data", lab);
     SaveMRU(L"Temp Dir", tmp);
 }
+
 static void DoSplit()
 {
     std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
@@ -1073,7 +979,11 @@ static void DoSplit()
 
     fs::path src = fs::path(tmp) / "source";
     fs::path dst = fs::path(tmp) / "dataset";
-    try { if (fs::exists(dst)) fs::remove_all(dst); }
+    try 
+    { 
+        if (fs::exists(dst)) 
+            fs::remove_all(dst); 
+    }
     catch (...) {}
     ResetProgress();
     AppendLog(L"[SPLIT] source=" + src.wstring() + L"   dest=" + dst.wstring());
@@ -1091,9 +1001,8 @@ static void DoSplit()
 /////////////////////////////////////////////////////////////////
 int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 {
-	
     // hDlgが有効なら各コントロールから値を取得して保存
-	if (hDlg != nullptr)
+    if (hDlg != nullptr)
     {
         SaveMRU(L"Image Data", GetText(hDlg, IDC_COMBO_IMG));
         SaveMRU(L"Label Data", GetText(hDlg, IDC_COMBO_LABEL));
@@ -1150,15 +1059,15 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         }
         else {
             SaveMRU(L"backend", L"YOLOV5");
-		}
+	    }
 
         // v8/v11 用の HTTP/HTTPS プロキシ設定
         SaveMRU(L"proxy_http", GetText(hDlg, IDC_CMB_PROXY_HTTP));
         SaveMRU(L"proxy_https", GetText(hDlg, IDC_CMB_PROXY_HTTPS));
-		chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
+	    chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
         SaveMRU(L"chkUseProxy", chkUseProxy ? L"1" : L"0");
-
     }
+/*
     else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
     {
         SaveMRU(L"Image Data", this->src_dir_image); // 例: "C:\path\to\images"
@@ -1204,17 +1113,17 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         SaveMRU(L"proxy_http", this->http_proxy);
 		SaveMRU(L"proxy_https", this->https_proxy);
         SaveMRU(L"chkUseProxy", this->chkUseProxy ? L"1" : L"0");
-
     }
+*/
     return 0;
 }
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 // 
 // Build train command and launch
 //
 //////////////////////////////////////////////////////////////////////////////////////
+
 static void DoTrain(HWND hDlg = nullptr)
 {
 	TrainParams _params;
@@ -1225,10 +1134,9 @@ static void DoTrain(HWND hDlg = nullptr)
 	_params.SaveCurrentSettingsToIni(hDlg); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
 }
 
-
-// ------------------------------
+//////////////////////////////////////////////////////////////////////////////////////
 // Dialog 初期化
-// ------------------------------
+//////////////////////////////////////////////////////////////////////////////////////
 // 先頭アイテムを選択して"表示"まで行う（CBS_DROPDOWN/CBS_SIMPLE/CBS_DROPDOWNLIST 全対応）
 static void ShowFirstComboItem(HWND hCombo)
 {
@@ -1346,8 +1254,13 @@ static void InitDialog(HWND hDlg)
 	ShowFirstComboItem(GetDlgItem(hDlg, IDC_CMB_PROXY_HTTPS));
 
     // 規定値
-    SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
-    SetDlgItemTextW(hDlg, IDC_EDIT_REDUCTION, L"1.0");
+    LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_TRAINPCT), L"TrainPercent");
+    LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_REDUCTION), L"Reduction");
+    // 空なら既定値を入れる
+    if (GetWindowTextLengthW(GetDlgItem(hDlg, IDC_EDIT_TRAINPCT)) == 0)
+        SetDlgItemTextW(hDlg, IDC_EDIT_TRAINPCT, L"80");
+    if (GetWindowTextLengthW(GetDlgItem(hDlg, IDC_EDIT_REDUCTION)) == 0)
+        SetDlgItemTextW(hDlg, IDC_EDIT_REDUCTION, L"1.0");
 
     CheckDlgButton(hDlg, IDC_CHK_CACHE,         LoadFlagFromIni(L"cache",       false) ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHK_EXIST_OK,      LoadFlagFromIni(L"exist_ok",    false) ? BST_CHECKED : BST_UNCHECKED);
@@ -1357,7 +1270,9 @@ static void InitDialog(HWND hDlg)
 
 	LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_PROJECT), L"project");
 
-	std::wstring backend = LoadMRUToString(GetDlgItem(hDlg, IDC_RAD_YOLOV5), L"backend");
+	//std::wstring backend = LoadMRUToString(GetDlgItem(hDlg, IDC_RAD_YOLOV5), L"backend");
+    std::wstring backend = LoadMRUToString(L"backend");
+
     if( backend == L"YOLOV5") {
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5);
     }
@@ -1431,237 +1346,229 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
 static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) {
-    case WM_INITDIALOG: 
-        InitDialog(hDlg); 
-        return TRUE;
-    case WM_COMMAND:
-    {
-        //if (LOWORD(wParam) == IDC_STC_TEMP && HIWORD(wParam) == STN_CLICKED) {
-        //    if (bTmpTipShow) HideTempTip(hDlg);
-        //    else                ShowTempTipAtCursor(hDlg);
-        //    return TRUE;
-        //}
-        switch (LOWORD(wParam))
+        case WM_INITDIALOG:
         {
-        case IDC_BTN_BROWSE_IMG: {
-            std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_IMG), p); }
-        } break;
-        case IDC_BTN_BROWSE_LABEL: {
-            std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_LABEL), p); }
-        } break;
-        case IDC_BTN_BROWSE_TEMP: {
-            std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_TEMP), p); }
-        } break;
-        case IDC_BTN_BROWSE_WORKDIR: {
-            std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_WORKDIR), p); }
-        } break;
-        case IDC_BTN_BROWSE_TRAINPY: {
-            COMDLG_FILTERSPEC spec[] = { {L"Python (*.py)", L"*.py"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_TRAINPY), p); }
-        } break;
-        case IDC_BTN_BROWSE_YAML: {
-            COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_YAML), p); }
-        } break;
-
-        case IDC_BTN_EDIT_YAML: {
-            std::wstring p = GetText(g_hDlg, IDC_COMBO_YAML);
-            if (OpenFileWithDefaultEditor(p)) {
-                // ついでに MRU の先頭へ
-                SaveMRU(L"data.yaml", p);
-            }
-        }break;
-
-        case IDC_BTN_BROWSE_HYP: {
-            COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_HYP), p); }
-        } break;
-        case IDC_BTN_EDIT_HYP: {
-            std::wstring p = GetText(g_hDlg, IDC_COMBO_HYP);
-            if (OpenFileWithDefaultEditor(p)) {
-                // ついでに MRU の先頭へ
-                SaveMRU(L"hyp.yaml", p);
-            }
-        } break;
-
-        case IDC_BTN_BROWSE_CFG: {
-            COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_CFG), p); }
-        } break;
-
-        case IDC_BTN_EDIT_CFG: {
-            std::wstring p = GetText(g_hDlg, IDC_COMBO_CFG);
-            if (OpenFileWithDefaultEditor(p)) {
-                // ついでに MRU の先頭へ
-                SaveMRU(L"cfg.yaml", p);
-            }
-        } break;
-
-        case IDC_BTN_BROWSE_WEIGHTS: {
-            COMDLG_FILTERSPEC spec[] = { {L"PyTorch (*.pt)", L"*.pt"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_WEIGHTS), p); }
-        } break;
-
-        case IDC_BTN_RESUME_BROWSE: {
-            COMDLG_FILTERSPEC spec[] = { {L"PyTorch (*.pt)", L"*.pt"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_CMB_RESUME), p); }
-        } break;
-
-        // conda info --envsを実行して環境を確認する
-        case IDC_BTN_VIEW_PYENV:
-        {
-            std::wstring cmd = L"conda info --envs";
-            AppendLog(L"[ENV] " + cmd);
-            AppendLog(RET);
-            LaunchWithCapture(cmd);
-		} break;
-
-		//TempDirのディレクトリの下にあるディレクトリ、ファイル消去する。
-        case IDC_BTN_CLEARTMP: {
-            if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加
-
-            std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
-            if (tempDir.empty()) {
-                AppendLog(L"[TEMP] Temp directory is not set.");
-                AppendLog(RET);
-                return TRUE;
-            }
-            fs::path tempPath(tempDir);
-            if (!fs::exists(tempPath)) {
-                AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring());
-                AppendLog(RET);
-                return TRUE;
-            }
-            //一応本当に消すか確認する
-            int _ret = MessageBoxW(hDlg, L"Temp directory will be cleared. Continue?", L"Confirm", MB_OKCANCEL | MB_ICONWARNING);
-            if (_ret == IDOK) {
-                try {
-                    fs::remove_all(tempPath);
-                    AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
-                }
-                catch (const fs::filesystem_error& e) {
-                    std::wstring _tmp = FromUTF8(e.what());
-                    AppendLog(L"[TEMP] Error clearing temp directory: " + _tmp);
-                }
-            }
-            else
-            {
-                AppendLog(L"[TEMP] Clear operation cancelled.");
-                AppendLog(RET);
-                return TRUE;
-            }
-
-            AppendLog(RET);
-		} break;
-
-        case IDC_BTN_BROWSE_PYTHON: {
-            COMDLG_FILTERSPEC spec[] = { {L"Python executable (python.exe)", L"python.exe"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_PYTHON), p); }
-        } break;
-        case IDC_BTN_BROWSE_ACTIVATE: {
-            COMDLG_FILTERSPEC spec[] = { {L"Batch (*.bat;*.cmd)", L"*.bat;*.cmd"} };
-            std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), p); }
-        } break;
-        case IDC_BTN_COPY: {
-            std::thread([]() { DoCopyToTemp(); }).detach();
-        }break;
-        case IDC_BTN_SPLIT: {
-            std::thread([]() { DoSplit(); }).detach();
-        }break;
-        case IDC_BTN_TRAIN: {
-            //std::thread([]() { DoTrain(); }).detach();
-
-            std::thread([hDlg]() { DoTrain(hDlg); }).detach();
-
-
-        }break;
-        case IDC_BTN_STOP: {
-            StopChild();
-        }break;
-        case IDC_BTN_SAFE_DIR:
-        {
-            if (HIWORD(wParam) == BN_CLICKED)
-            {
-                // 例：あなたのGUIで「作業フォルダ」を保持している変数を使う
-                // ここでは仮に g_WorkDir として説明します
-                std::wstring workdir = GetText(g_hDlg, IDC_COMBO_WORKDIR);
-                if (!workdir.empty()) {
-                    AddSafeDirectory(workdir);
-                }
-                else {
-                    MessageBoxW(hDlg, L"作業ディレクトリが未設定です。", L"Git設定", MB_OK | MB_ICONWARNING);
-                }
-                //return TRUE;
-            }
+            InitDialog(hDlg);
+            return TRUE;
         }
         break;
-
-        case IDC_RAD_YOLOV5:
-        case IDC_RAD_YOLOV8:
-        case IDC_RAD_YOLO11:
-            if (HIWORD(wParam) == BN_CLICKED) {
-                UpdateBackendUI(hDlg);
-                return TRUE;
-            }
-            break;
-
-        case IDC_CHK_USEPROXY:
+        case WM_COMMAND:
         {
-            if (HIWORD(wParam) == BN_CLICKED)
+            //if (LOWORD(wParam) == IDC_STC_TEMP && HIWORD(wParam) == STN_CLICKED) {
+            //    if (bTmpTipShow) HideTempTip(hDlg);
+            //    else                ShowTempTipAtCursor(hDlg);
+            //    return TRUE;
+            //}
+            switch (LOWORD(wParam))
             {
-                UpdateProxyUI(hDlg);
+                case IDC_BTN_BROWSE_IMG: 
+					PickFolderEx(hDlg, IDC_COMBO_IMG, L"Original IMAGE Directory");
+                break;
+                case IDC_BTN_BROWSE_LABEL: {
+                    //std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_LABEL), p); }
+					PickFolderEx(hDlg, IDC_COMBO_LABEL, L"Original LABEL Directory");
+                } break;
+                case IDC_BTN_BROWSE_TEMP: {
+                    //std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_TEMP), p); }
+                    PickFolderEx(hDlg, IDC_COMBO_TEMP, L"Tempolary Source Directory");
+                } break;
+                case IDC_BTN_BROWSE_WORKDIR: {
+                    //std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_WORKDIR), p); }
+                    PickFolderEx(hDlg, IDC_COMBO_WORKDIR);
+                } break;
+                case IDC_BTN_BROWSE_TRAINPY:{
+                    COMDLG_FILTERSPEC spec[] = { {L"Python (*.py)", L"*.py"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_TRAINPY), p);}
+                    PickFileEx(hDlg, IDC_COMBO_TRAINPY, spec, L"train.py");
+                } break;
+                case IDC_BTN_BROWSE_YAML: {
+                    COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_YAML), p); }
+                    PickFileEx(hDlg, IDC_COMBO_YAML, spec, L"Data.yaml(クラシフィケーション定義とデータ指定のあるファイル)");
+                } break;
+
+                case IDC_BTN_EDIT_YAML: {
+                    std::wstring p = GetText(g_hDlg, IDC_COMBO_YAML);
+                    if (OpenFileWithDefaultEditor(p)) {
+                        // ついでに MRU の先頭へ
+                        SaveMRU(L"data.yaml", p);
+                    }
+                }break;
+
+                case IDC_BTN_BROWSE_HYP: {
+                    COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_HYP), p); }
+                    PickFileEx(hDlg, IDC_COMBO_HYP, spec, L"Hyp.yaml(ハイパーチューニング定義ファイル)");
+                } break;
+                case IDC_BTN_EDIT_HYP: {
+                    std::wstring p = GetText(g_hDlg, IDC_COMBO_HYP);
+                    if (OpenFileWithDefaultEditor(p)) {
+                        // ついでに MRU の先頭へ
+                        SaveMRU(L"hyp.yaml", p);
+                    }
+                } break;
+
+                case IDC_BTN_BROWSE_CFG: {
+                    COMDLG_FILTERSPEC spec[] = { {L"YAML (*.yaml;*.yml)", L"*.yaml;*.yml"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_CFG), p); }
+                    PickFileEx(hDlg, IDC_COMBO_CFG, spec, L"Cfg.yaml(コンフィグレーション定義ファイル)");
+                } break;
+
+                case IDC_BTN_EDIT_CFG: {
+                    std::wstring p = GetText(g_hDlg, IDC_COMBO_CFG);
+                    if (OpenFileWithDefaultEditor(p)) {
+                        // ついでに MRU の先頭へ
+                        SaveMRU(L"cfg.yaml", p);
+                    }
+                } break;
+
+                case IDC_BTN_BROWSE_WEIGHTS: {
+                    COMDLG_FILTERSPEC spec[] = { {L"Weight (*.pt)", L"*.pt"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_WEIGHTS), p); }
+                    PickFileEx(hDlg, IDC_COMBO_WEIGHTS, spec, L"weight.pt(初期重みファイル)");
+                } break;
+
+                case IDC_BTN_RESUME_BROWSE: {
+                    COMDLG_FILTERSPEC spec[] = { {L"Resume (*.pt)", L"*.pt"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_CMB_RESUME), p); }
+                    PickFileEx(hDlg, IDC_CMB_RESUME, spec, L"Resume.pt(トレーニング再開の時の初期重みファイル)");
+                } break;
+                                          // conda info --envsを実行して環境を確認する
+                case IDC_BTN_VIEW_PYENV:
+                {
+                    std::wstring cmd = L"conda info --envs";
+                    AppendLog(L"[ENV] " + cmd);
+                    AppendLog(RET);
+                    LaunchWithCapture(cmd);
+                } break;
+                //TempDirのディレクトリの下にあるディレクトリ、ファイル消去する。
+                case IDC_BTN_CLEARTMP:
+                {
+                    if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加
+
+                    std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
+                    if (tempDir.empty()) {
+                        AppendLog(L"[TEMP] Temp directory is not set.");
+                        AppendLog(RET);
+                        return TRUE;
+                    }
+                    fs::path tempPath(tempDir);
+                    if (!fs::exists(tempPath)) {
+                        AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring());
+                        AppendLog(RET);
+                        return TRUE;
+                    }
+                    //一応本当に消すか確認する
+                    int _ret = MessageBoxW(hDlg, L"Temp directory will be cleared. Continue?", L"Confirm", MB_OKCANCEL | MB_ICONWARNING);
+                    if (_ret == IDOK) {
+                        try {
+                            fs::remove_all(tempPath);
+                            AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
+                        }
+                        catch (const fs::filesystem_error& e) {
+                            std::wstring _tmp = FromUTF8(e.what());
+                            AppendLog(L"[TEMP] Error clearing temp directory: " + _tmp);
+                        }
+                    }
+                    else {
+                        AppendLog(L"[TEMP] Clear operation cancelled.");
+                        AppendLog(RET);
+                        return TRUE;
+                    }
+                    AppendLog(RET);
+                } break; //IDC_BTN_CLEARTMP
+
+                case IDC_BTN_BROWSE_PYTHON: {
+                    COMDLG_FILTERSPEC spec[] = { {L"Python executable (python.exe)", L"python.exe"} };
+                    //std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_PYTHON), p); }
+                    PickFileEx(hDlg, IDC_COMBO_PYTHON, spec, L"Python.exe(必要な時のみ)");
+                } break;
+                case IDC_BTN_BROWSE_ACTIVATE: {
+                    COMDLG_FILTERSPEC spec[] = { {L"Batch (*.bat;*.cmd)", L"*.bat;*.cmd"} };
+                    std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), p); }
+                } break;
+                case IDC_BTN_COPY: {
+                    std::thread([]() { DoCopyToTemp(); }).detach();
+                }break;
+                case IDC_BTN_SPLIT: {
+                    std::thread([]() { DoSplit(); }).detach();
+                }break;
+                case IDC_BTN_TRAIN: {
+                    //std::thread([]() { DoTrain(); }).detach();
+                    std::thread([hDlg]() { DoTrain(hDlg); }).detach();
+                }break;
+                case IDC_BTN_STOP: {
+                    StopChild();
+                }break;
+                case IDC_BTN_SAFE_DIR:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED)
+                    {
+                        // 例：あなたのGUIで「作業フォルダ」を保持している変数を使う
+                        // ここでは仮に g_WorkDir として説明します
+                        std::wstring workdir = GetText(g_hDlg, IDC_COMBO_WORKDIR);
+                        if (!workdir.empty()) {
+                            AddSafeDirectory(workdir);
+                        }
+                        else {
+                            MessageBoxW(hDlg, L"作業ディレクトリが未設定です。", L"Git設定", MB_OK | MB_ICONWARNING);
+                        }
+                        //return TRUE;
+                    }
+                }break;
+                case IDC_RAD_YOLOV5:
+                case IDC_RAD_YOLOV8:
+                case IDC_RAD_YOLO11:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED) {
+                        UpdateBackendUI(hDlg);
+                        return TRUE;
+                    }
+                }break;
+
+                case IDC_CHK_USEPROXY:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED)
+                    {
+                        UpdateProxyUI(hDlg);
+                        return TRUE;
+                    }
+                }break;
+
+                case IDC_CHK_USEHYPERPARAM:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED)
+                    {
+                        UpdateHyperUI(hDlg);
+                        return TRUE;
+                    }
+                default:
+                    break;
+                }
+                return false;
+			} // switch (LOWORD(wParam))
+            break;
+                //case WM_DESTROY:
+                //	g_hDlg = nullptr;
+                //       SaveSettings(hDlg);
+                //       PostQuitMessage(0);
+                //	return TRUE;
+            case WM_CLOSE:
+            {
+                TrainParams _params;
+                // ここで設定をINIに保存
+                _params.SaveCurrentSettingsToIni(hDlg); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
+                //SaveCurrentSettingsToIni(hDlg);
+
+                StopChild();
+                EndDialog(hDlg, 0);
                 return TRUE;
             }
-		} break;
-        //case IDC_BTN_SETPROXY:
-        //{
-        //    if (HIWORD(wParam) == BN_CLICKED)
-        //    {
-        //            // HTTP/HTTPS プロキシの設定を保存
-        //        std::wstring http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
-        //        std::wstring https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
-        //        SaveMRU(L"proxy_http", http_proxy);
-        //        SaveMRU(L"proxy_https", https_proxy);
-
-        //        // コマンドラインで実行
-        //        std::wstringstream ss;
-        //        // 一時的にプロセス内で有効
-        //        ss << L"set HTTP_PROXY=" << http_proxy
-        //           << L" && set HTTPS_PROXY=" << https_proxy
-        //           << L" && echo HTTP_PROXY=%HTTP_PROXY% && echo HTTPS_PROXY=%HTTPS_PROXY%";
-        //        const std::wstring command = ss.str();
-        //        LaunchWithCapture(command); // cmd.exe /C は内部で付与される
-
-        //        AppendLog(RET);
-        //    }
-        //} break;
-
-        default:
-            break;
-        }
-        return false;
-    }
-
-	//case WM_DESTROY:
-	//	g_hDlg = nullptr;
- //       SaveSettings(hDlg);
- //       PostQuitMessage(0);
-	//	return TRUE;
-
-    case WM_CLOSE:
-    {
-		TrainParams _params;
-		// ここで設定をINIに保存
-		_params.SaveCurrentSettingsToIni(hDlg); // hDlgが有効ならコントロールから値を保存 無効ならメモリ上の共有データを保存
-        //SaveCurrentSettingsToIni(hDlg);
-
-        StopChild();
-        EndDialog(hDlg, 0);
-        return TRUE;
-    }
-    }
-    return FALSE;
-}
+		}// WM_COMMAND
+        return FALSE;
+	} // switch (msg)
+	return FALSE; // デフォルトの処理へ
+}// DlgProc
 
 // ------------------------------
 // WinMain

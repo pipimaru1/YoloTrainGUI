@@ -38,4 +38,6 @@
 
 #include <commdlg.h>   // GetOpenFileName
 
+#include <wrl/client.h>
+
 #endif //PCH_H
