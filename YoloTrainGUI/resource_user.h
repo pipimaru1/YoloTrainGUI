@@ -33,6 +33,8 @@
 #define IDC_STC_PROXY_HTTP          1830   // 新規追加ボタンID
 #define IDC_STC_PROXY_HTTPS         1831   // 新規追加ボタンID
 #define IDC_STC_CFGYAML             1832   // 新規追加ボタンID（例：Exportボタン）
+#define IDC_BTN_EDITHISTORY         1833   // 新規追加ボタンID（例：Exportボタン）
+#define IDC_BTN_CLEARLOG            1834   // 新規追加ボタンID（例：Exportボタン）
 
 /*
 リソース追加手順

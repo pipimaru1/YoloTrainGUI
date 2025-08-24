@@ -336,14 +336,10 @@ static void EnableControls(HWND hDlg, const int* ids, size_t n, BOOL enable)
 //}
 
 // ラジオ選択に応じてUIを更新
-static void UpdateBackendUI(HWND hDlg)
+static void Updated_UI(HWND hDlg)
 {
+	// YoloV5/V8/V11 のラジオボタンの状態に応じてUIを更新
     const BOOL isV5 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV5) == BST_CHECKED);
-    //const BOOL isV8 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV8) == BST_CHECKED);
-    //const BOOL isV11 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLO11) == BST_CHECKED);
-
-    // v5専用UI → v8/11のときはグレーアウト
-    //SetV5OnlyControlsEnabled(hDlg, isV5);
     const int ids[] = {
     IDC_STC_TRAINPY,
     IDC_COMBO_TRAINPY,
@@ -358,28 +354,34 @@ static void UpdateBackendUI(HWND hDlg)
     IDC_BTN_EDIT_CFG
     };
     EnableControls(hDlg, ids, _countof(ids), isV5);
-}
-static void UpdateProxyUI(HWND hDlg)
-{
-	bool chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
-    const int ids[] = {
+
+	// Proxy UI 更新
+    bool chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
+    const int ids_proxy[] = {
     IDC_STC_PROXY_HTTP,
     IDC_STC_PROXY_HTTPS,
     IDC_CMB_PROXY_HTTP,
     IDC_CMB_PROXY_HTTPS
-	};
-    EnableControls(hDlg, ids, _countof(ids), chkUseProxy);
-}
+    };
+    EnableControls(hDlg, ids_proxy, _countof(ids_proxy), chkUseProxy);
 
-static void UpdateHyperUI(HWND hDlg)
-{
+	// Hyperparameter tuning UI 更新
     const BOOL isUseHyp = (IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED);
-    const int ids[] = {
+    const int ids_hyp[] = {
         IDC_COMBO_HYP,
         IDC_BTN_BROWSE_HYP,
         IDC_BTN_EDIT_HYP
     };
-    EnableControls(hDlg, ids, _countof(ids), isUseHyp);
+    EnableControls(hDlg, ids_hyp, _countof(ids_hyp), isUseHyp);
+
+	// Resume UI 更新
+    const BOOL isResume = (IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME) == BST_CHECKED);
+    const int ids_resume[] = {
+        IDC_CMB_RESUME,
+        IDC_BTN_RESUME_BROWSE
+    };
+	EnableControls(hDlg, ids_resume, _countof(ids_resume), isResume);
+
 }
 
 // ------------------------------
@@ -1270,6 +1272,11 @@ static void InitDialog(HWND hDlg)
 
 	LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_PROJECT), L"project");
 
+
+	//UpdateBackendUI(hDlg); // バックエンドのUI更新
+ //   UpdateProxyUI(hDlg);   // プロキシのUI更新
+	//UpdateHyperUI(hDlg);  // ハイパーパラメータのUI更新
+
 	//std::wstring backend = LoadMRUToString(GetDlgItem(hDlg, IDC_RAD_YOLOV5), L"backend");
     std::wstring backend = LoadMRUToString(L"backend");
 
@@ -1286,14 +1293,13 @@ static void InitDialog(HWND hDlg)
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5); // default
 	}
 
-    //グレーアウトしたりする
-    UpdateBackendUI(hDlg);
-    UpdateProxyUI(hDlg);
+    // チェックボックス設定の後、関連するコントロールをグレーアウトしたりする
+    Updated_UI(hDlg);
+
 
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
     InitCommonControlsEx(&icc);
-
     SetTootips(hDlg);
 }
 
@@ -1488,16 +1494,23 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                     std::wstring p; if (PickFile(hDlg, spec, 1, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_ACTIVATE), p); }
                 } break;
                 case IDC_BTN_COPY: {
+                    if (HIWORD(wParam) != BN_CLICKED)
+                        return TRUE; // これ必須：押下以外は無視
                     std::thread([]() { DoCopyToTemp(); }).detach();
                 }break;
                 case IDC_BTN_SPLIT: {
+                    if (HIWORD(wParam) != BN_CLICKED)
+                        return TRUE; // これ必須：押下以外は無視
                     std::thread([]() { DoSplit(); }).detach();
                 }break;
                 case IDC_BTN_TRAIN: {
-                    //std::thread([]() { DoTrain(); }).detach();
+                    if (HIWORD(wParam) != BN_CLICKED) 
+                        return TRUE; // これ必須：押下以外は無視
                     std::thread([hDlg]() { DoTrain(hDlg); }).detach();
                 }break;
                 case IDC_BTN_STOP: {
+                    if (HIWORD(wParam) != BN_CLICKED)
+                        return TRUE; // これ必須：押下以外は無視
                     StopChild();
                 }break;
                 case IDC_BTN_SAFE_DIR:
@@ -1521,7 +1534,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 case IDC_RAD_YOLO11:
                 {
                     if (HIWORD(wParam) == BN_CLICKED) {
-                        UpdateBackendUI(hDlg);
+                        Updated_UI(hDlg);
                         return TRUE;
                     }
                 }break;
@@ -1530,7 +1543,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 {
                     if (HIWORD(wParam) == BN_CLICKED)
                     {
-                        UpdateProxyUI(hDlg);
+                        Updated_UI(hDlg);
                         return TRUE;
                     }
                 }break;
@@ -1539,20 +1552,35 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 {
                     if (HIWORD(wParam) == BN_CLICKED)
                     {
-                        UpdateHyperUI(hDlg);
+                        Updated_UI(hDlg);
                         return TRUE;
                     }
+                }break;
+                //過去のコマンドヒストリーを開く
+                case IDC_BTN_EDITHISTORY:
+                {
+                    std::wstring p = GetHistoryFile();
+                    OpenFileWithDefaultEditor(p);
+                }break;
+
+                //ログをクリアする
+                case IDC_BTN_CLEARLOG:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED) {
+                        SetWindowTextW(GetDlgItem(hDlg, IDC_LOG), L"");
+                    }
+                }break;
+
                 default:
-                    break;
-                }
-                return false;
-			} // switch (LOWORD(wParam))
-            break;
-                //case WM_DESTROY:
-                //	g_hDlg = nullptr;
-                //       SaveSettings(hDlg);
-                //       PostQuitMessage(0);
-                //	return TRUE;
+                    //break;
+                    return false;
+			}break; // switch (LOWORD(wParam))
+
+            //case WM_DESTROY:
+            //	g_hDlg = nullptr;
+            //       SaveSettings(hDlg);
+            //       PostQuitMessage(0);
+            //	return TRUE;
             case WM_CLOSE:
             {
                 TrainParams _params;
