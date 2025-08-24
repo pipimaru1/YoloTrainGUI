@@ -117,8 +117,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>cd /d  $(SolutionDir)
-call $(SolutionDir)\update.bat</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -139,6 +139,10 @@ call $(SolutionDir)\update.bat</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>cd /d  $(SolutionDir)
+call $(SolutionDir)\update.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
@@ -171,6 +175,7 @@ call $(SolutionDir)\update.bat</Command>
     <Image Include="YoloTrainGUI.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\update.bat" />
     <None Include="mru_history.ini" />
   </ItemGroup>
   <ItemGroup>

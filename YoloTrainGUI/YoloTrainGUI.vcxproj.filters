@@ -75,6 +75,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="mru_history.ini" />
+    <None Include="..\update.bat" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="history.txt" />
