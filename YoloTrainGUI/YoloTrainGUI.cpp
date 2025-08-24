@@ -1556,6 +1556,17 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                         return TRUE;
                     }
                 }break;
+                case IDC_CHK_LOG_CRLF2LF:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED)
+                    {
+                        // チェック状態を取得
+                        _IDC_CHK_LOG_CRLF2LF = (IsDlgButtonChecked(hDlg, IDC_CHK_LOG_CRLF2LF) == BST_CHECKED);
+					}
+
+                }break;
+
+
                 //過去のコマンドヒストリーを開く
                 case IDC_BTN_EDITHISTORY:
                 {

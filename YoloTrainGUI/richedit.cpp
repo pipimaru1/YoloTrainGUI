@@ -99,6 +99,8 @@ static COLORREF AnsiColor(int code)
     }
 }
 
+bool _IDC_CHK_LOG_CRLF2LF = false;
+
 // ANSIエスケープを解釈して RichEdit に吐く
 void LogAppendANSI(const std::wstring& s)
 {
@@ -180,11 +182,21 @@ void LogAppendANSI(const std::wstring& s)
             flush(true);               // ★ここを常に置換で出すのがポイント
             crMode = true;             // 次の文字列も"置換対象"として扱う
             // 直後が LF なら CRLF → 改行確定として扱う（置換ではない）
-            if (i + 1 < s.size() && s[i + 1] == L'\n') {
-                // 改行を append で確定（空行を作らないため chunk は使わない）
-                RichAppend(hRe, L"\n", st);
-                crMode = false;
-                ++i;                    // LF を消費
+            if (i + 1 < s.size() && s[i + 1] == L'\n') 
+            {
+                if(_IDC_CHK_LOG_CRLF2LF)
+                {
+                    RichReplaceLastLine(hRe, L"", st); // 空行に置換（CRLFをLFに変換）
+                    crMode = false;
+                    ++i;                    // LF を消費
+                }
+                else
+                {
+                    // 改行を append で確定（空行を作らないため chunk は使わない）
+                    RichAppend(hRe, L"\n", st);
+                    crMode = false;
+                    ++i;                    // LF を消費
+                }
             }
             continue;
         }

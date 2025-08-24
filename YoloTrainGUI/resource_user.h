@@ -35,6 +35,7 @@
 #define IDC_STC_CFGYAML             1832   // 新規追加ボタンID（例：Exportボタン）
 #define IDC_BTN_EDITHISTORY         1833   // 新規追加ボタンID（例：Exportボタン）
 #define IDC_BTN_CLEARLOG            1834   // 新規追加ボタンID（例：Exportボタン）
+#define IDC_CHK_LOG_CRLF2LF			1835   // チェックを入れると、ログファイルでCRLFをLFとする。
 
 /*
 リソース追加手順
