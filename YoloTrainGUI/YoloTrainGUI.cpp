@@ -1566,6 +1566,24 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
 
                 }break;
 
+                //chk_crlf.pyを実行する
+                case IDC_BTN_CHKCRLF2LF:
+                    {
+                    if (HIWORD(wParam) != BN_CLICKED) 
+                        return TRUE; // ← これを追加
+                    std::wstring python = GetText(hDlg, IDC_COMBO_PYTHON);
+                    std::wstring script = GetText(hDlg, IDC_COMBO_ACTIVATE);
+                    if (python.empty() || script.empty()) {
+                        AppendLog(L"[CHKCRLF] Python or activate script is not set.");
+                        AppendLog(RET);
+                        return TRUE;
+                    }
+                    std::wstring cmd = L"activate " + script + +L" && "+ python + L" chk_crlf.py";
+                    AppendLog(L"[CHKCRLF] " + cmd);
+                    AppendLog(RET);
+					LaunchWithCapture(cmd);
+				}break;
+
 
                 //過去のコマンドヒストリーを開く
                 case IDC_BTN_EDITHISTORY:
