@@ -99,8 +99,43 @@ static COLORREF AnsiColor(int code)
     }
 }
 
-bool _IDC_CHK_LOG_CRLF2LF = false;
+//////////////////////////////////////////////////////////////////////////////////////////
+// 先頭から古い行を削る。hysteresis で「少し余分に削る」→削除頻度を下げて高速化
 
+
+static void TrimOldLines(HWND hRe, int maxLines = MAXLINES_RICHEDIT, int hysteresis = 200)
+{
+    if (!hRe || maxLines <= 0) return;
+
+    LRESULT lineCount = SendMessageW(hRe, EM_GETLINECOUNT, 0, 0);
+    if (lineCount <= maxLines) return;
+
+    int drop = (int)(lineCount - maxLines + hysteresis);
+    if (drop < 1) drop = 1;
+
+    // 先頭から drop 行の末尾までの文字オフセットを求める
+    // EM_LINEINDEX(n): n 行目の先頭の文字インデックス
+    LRESULT end = SendMessageW(hRe, EM_LINEINDEX, drop, 0);
+    if (end <= 0) return;
+
+    // まとめて削除（描画抑止でチラつき防止）
+    SendMessageW(hRe, WM_SETREDRAW, FALSE, 0);
+    CHARRANGE cr{ 0, (LONG)end };
+    SendMessageW(hRe, EM_SETREADONLY, FALSE, 0);
+    SendMessageW(hRe, EM_EXSETSEL, 0, (LPARAM)&cr);
+    SendMessageW(hRe, EM_REPLACESEL, FALSE, (LPARAM)L"");
+    SendMessageW(hRe, EM_SETREADONLY, TRUE, 0);
+    SendMessageW(hRe, WM_SETREDRAW, TRUE, 0);
+
+    // キャレットを末尾へ（スクロール維持）
+    LRESULT len = SendMessageW(hRe, WM_GETTEXTLENGTH, 0, 0);
+    cr.cpMin = cr.cpMax = (LONG)len;
+    SendMessageW(hRe, EM_EXSETSEL, 0, (LPARAM)&cr);
+    SendMessageW(hRe, EM_SCROLLCARET, 0, 0);
+}
+
+bool _IDC_CHK_LOG_CRLF2LF = false;
+//////////////////////////////////////////////////////////////////////////////////////////
 // ANSIエスケープを解釈して RichEdit に吐く
 void LogAppendANSI(const std::wstring& s)
 {
@@ -115,6 +150,10 @@ void LogAppendANSI(const std::wstring& s)
         if (chunk.empty()) return;
         if (replace) RichReplaceLastLine(hRe, chunk, st);
         else         RichAppend(hRe, chunk, st);
+
+        // ★ここで古い行を落とす（上限 10000 行）
+        TrimOldLines(hRe, MAXLINES_RICHEDIT, 200);
+
         chunk.clear();
         };
 

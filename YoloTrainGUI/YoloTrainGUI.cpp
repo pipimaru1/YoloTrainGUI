@@ -31,6 +31,17 @@ const wchar_t *RET = L"\r\n";
 static TOOLINFOW g_TipTI{};
 static bool      bTmpTipShow = false;
 
+//サイズ変更対応
+static int  g_initCx = 0, g_initCy = 0;   // 初期クライアントサイズ
+static RECT g_logInit = {};               // IDC_LOG の初期位置（クライアント座標）
+static int  g_logLeft = 0, g_logTop = 0, g_logWidth = 0, g_logHeight = 0;
+
+static void GetChildRectClient(HWND hParent, HWND hChild, RECT& rcOut)
+{
+    GetWindowRect(hChild, &rcOut);
+    MapWindowPoints(nullptr, hParent, (POINT*)&rcOut, 2); // 画面座標→親のクライアント座標
+}
+
 // ツールチップ
 Tooltip ttTmpDir; // グローバルなツールチップオブジェクト
 
@@ -95,6 +106,23 @@ void SetTootips(HWND hDlg)
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"Git Safe", strGitSafe.c_str());   
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"Python Env", strChkEnv.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_CFGYAML, L"CFG Yaml", strTipCfgYaml.c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// richieditboxの不具合対応
+// 原因はほぼ確実に「別スレッドから RichEdit に SendMessage している」ことです。
+// サイズ変更中（UIスレッドが WM_SIZE 等で占有）に、バックグラウンドの読取スレッドが 
+// AppendLog→LogAppendANSI→SendMessage(EM_...) を投げると、UI スレッドと相互に待ち合って“詰まり”、
+// 以降の追記が出なくなる（止まる／落ちる）ことがあります。
+// ※ よくある誤解ですが、Win32 コントロールは“作成したスレッド＝UIスレッド”以外から触ってはいけません。
+// ミューテックスはスレッドアフィニティ問題を解決しません。
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ログを UI スレッドに投げる
+// 文字列をヒープに積んで UI スレッドへ投げる
+static void PostLogToUi(const std::wstring& s) {
+    if (!g_hDlg || s.empty()) return;
+    auto* payload = new std::wstring(s);        // 後で UI スレッドが delete
+    PostMessageW(g_hDlg, WM_APP_LOGAPPEND, 0, reinterpret_cast<LPARAM>(payload));
 }
 
 // ------------------------------
@@ -350,7 +378,7 @@ static void Updated_UI(HWND hDlg)
     IDC_BTN_BROWSE_TRAINPY,
     IDC_BTN_BROWSE_CFG,
     IDC_BTN_BROWSE_PYTHON,
-    IDC_BTN_EDIT_YAML,
+    //IDC_BTN_EDIT_YAML,
     IDC_BTN_EDIT_CFG
     };
     EnableControls(hDlg, ids, _countof(ids), isV5);
@@ -509,7 +537,9 @@ static void SplitDataset(const fs::path& sourceRoot, const fs::path& destRoot,
 // ------------------------------
 // Process runner with output capture
 // ------------------------------
-static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull)
+
+//_only_launch: true ならばプロセスハンドルを返すだけで出力キャプチャはしない
+static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_launch=false)
 {
     SECURITY_ATTRIBUTES sa{ sizeof(sa), nullptr, TRUE };
     HANDLE hRead = 0, hWrite = 0;
@@ -529,10 +559,25 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull)
         CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
     CloseHandle(hWrite);
 
+    if(_only_launch)
+    {
+        //if (!ok) {
+        //    CloseHandle(hRead);
+        //    AppendLog(L"[EXEC] Failed to start: " + cmdLineFull);
+        //    AppendLog(RET);
+        //    return nullptr;
+        //}
+        CloseHandle(pi.hThread);
+        g_hChildProc.store(pi.hProcess);
+        return pi.hProcess;
+	}
+
     if (!ok) {
         CloseHandle(hRead);
-        AppendLog(L"[EXEC] Failed to start: " + cmdLineFull);
-        AppendLog(RET);
+        //AppendLog(L"[EXEC] Failed to start: " + cmdLineFull);
+        //AppendLog(RET);
+        PostLogToUi(L"[EXEC] Failed to start: " + cmdLineFull);
+        PostLogToUi(RET);
         return nullptr;
     }
 
@@ -556,14 +601,18 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull)
                 ws.resize(wlen2);
                 MultiByteToWideChar(CP_ACP, 0, buf, n, ws.data(), wlen2);
             }
-            AppendLog(ws);
+            //AppendLog(ws);
+            PostLogToUi(ws);
 			//LogAppendANSI(ws); // ANSIカラーコードを含む場合はここで処理
         }
         CloseHandle(hRead);
         WaitForSingleObject(piH, INFINITE);
         DWORD ec = 0; GetExitCodeProcess(piH, &ec);
-        AppendLog(L"[EXEC] Exit code: " + std::to_wstring(ec));
-        AppendLog(RET);
+        //AppendLog(L"[EXEC] Exit code: " + std::to_wstring(ec));
+        //AppendLog(RET);
+        PostLogToUi(L"[EXEC] Exit code: " + std::to_wstring(ec));
+        PostLogToUi(RET);
+
         }).detach();
 
     CloseHandle(pi.hThread);
@@ -1296,11 +1345,24 @@ static void InitDialog(HWND hDlg)
     // チェックボックス設定の後、関連するコントロールをグレーアウトしたりする
     Updated_UI(hDlg);
 
-
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
     InitCommonControlsEx(&icc);
     SetTootips(hDlg);
+
+    //サイズ変更対応
+    RECT rcCli{}; GetClientRect(hDlg, &rcCli);
+    g_initCx = rcCli.right - rcCli.left;
+    g_initCy = rcCli.bottom - rcCli.top;
+
+    //HWND hLog = GetDlgItem(hDlg, IDC_LOG);          // ログ（最下部の RichEdit）
+    if (hLog) {
+        GetChildRectClient(hDlg, hLog, g_logInit);
+        g_logLeft = g_logInit.left;
+        g_logTop = g_logInit.top;
+        g_logWidth = g_logInit.right - g_logInit.left;
+        g_logHeight = g_logInit.bottom - g_logInit.top;
+    }
 }
 
 // 既定アプリで開く（“open” 動詞）
@@ -1342,6 +1404,147 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
         return false;
     }
     AppendLog(L"[OPEN] Launched editor for: " + path);
+    AppendLog(RET);
+    return true;
+}
+
+// tensorboard起動 起動しない(ToT)
+bool RUNNING_TENSORBOARD = false;
+void StartTensorBoardDetached_old(const std::wstring& logdir, const std::wstring& activate, int port = 6006) {
+    if (RUNNING_TENSORBOARD)
+        return;
+    else
+    {
+		RUNNING_TENSORBOARD = true;
+
+        std::wostringstream ss;
+
+        if (!activate.empty()) {
+            ss << L"cmd.exe /c call activate.bat " << activate << L" && ";
+        }
+        // 作業ディレクトリへ
+        ss << L"cd /d " << Quote(logdir) << L" && ";
+
+        ss << L"tensorboard --logdir " << Quote(logdir)
+            << L" --host 127.0.0.1 --port " << std::to_wstring(port)
+            << L" > c:\\tensorboard_stdout.log";
+
+        // CreateProcessW で親コンソールにぶら下げない
+        STARTUPINFOW si{}; si.cb = sizeof(si);
+        PROCESS_INFORMATION pi{};
+        //std::wstring cmdline = L"cmd.exe /c " + cmd; // 直接 tensorboard でも可
+        std::wstring cmdline = ss.str();
+
+        DWORD flags = CREATE_NO_WINDOW | DETACHED_PROCESS; // 画面無し・親切り離し
+        if (CreateProcessW(nullptr, cmdline.data(), nullptr, nullptr, FALSE, flags, nullptr, nullptr, &si, &pi)) 
+        {
+            CloseHandle(pi.hThread);
+            CloseHandle(pi.hProcess); // PID保持したければ保持する
+        }
+        else
+            {
+            RUNNING_TENSORBOARD = false;
+            AppendLog(L"[TENSORBOARD] CreateProcess failed.");
+            AppendLog(RET);
+		}
+    }
+}
+void StartTensorBoardDetached(const std::wstring& logdir,
+    const std::wstring& condaEnvName, // 例: L"yolov5"
+    int port = 6006)
+{
+    if (RUNNING_TENSORBOARD) return;
+
+    // conda.bat は PATH が通っていればこれでOK。通っていなければフルパスを渡す欄をUIで持つ
+    const std::wstring condaBat = L"conda.bat";
+
+    // 1) ブロック全体を括弧でまとめて、一括で stdout/stderr を捕まえる
+    //    ※ activate 失敗・cd 失敗も %TEMP% に出る
+    std::wostringstream cmd;
+    cmd << L"cmd.exe /d /c ("
+        << L"call " << Quote(condaBat) << L" activate " << Quote(condaEnvName)
+        << L" && tensorboard --logdir " << Quote(logdir)
+        << L" --host 127.0.0.1 --port " << port
+        << L") > %TEMP%\\tensorboard_stdout.log 2>&1";
+
+    std::wstring cmdline = cmd.str();
+    std::vector<wchar_t> buf(cmdline.begin(), cmdline.end());
+    buf.push_back(L'\0');
+
+    STARTUPINFOW si{}; si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    // 2) まずは NO_WINDOW のみで十分（親と切り離したい運用なら NEW_CONSOLE に）
+    DWORD flags = CREATE_NO_WINDOW;
+
+    // 3) 作業ディレクトリはここで指定（不要なら nullptr でも可）
+    LPCWSTR currentDir = logdir.c_str();
+
+    BOOL ok = CreateProcessW(
+        nullptr,            // lpApplicationName
+        buf.data(),         // 書き換え可能バッファ
+        nullptr, nullptr, FALSE,
+        flags,
+        nullptr,
+        currentDir,         // ここでCWDを渡すので「cd /d」は不要
+        &si, &pi
+    );
+    AppendLog(L"[TENSORBOARD] ");
+    AppendLog(buf.data());
+    AppendLog(RET);
+
+    if (ok) {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        RUNNING_TENSORBOARD = true;
+        AppendLog(L"[TENSORBOARD] launched. Open http://127.0.0.1:" + std::to_wstring(port) + L"/");
+        AppendLog(RET);
+    }
+    else {
+        RUNNING_TENSORBOARD = false;
+        AppendLog(L"[TENSORBOARD] CreateProcess failed.");
+        AppendLog(RET);
+    }
+}
+
+static void TrimInPlace(std::wstring& s)
+{
+    // 前方の空白を削除
+    s.erase(0, s.find_first_not_of(L" \t\r\n"));
+    // 後方の空白を削除
+    size_t endpos = s.find_last_not_of(L" \t\r\n");
+    if (endpos != std::wstring::npos)
+        s.erase(endpos + 1);
+    else
+        s.clear();
+}
+
+//URLを開く http:6006/tensorboard等
+static bool OpenURLWithDefaultBrowser(const std::wstring& url)
+{
+    std::wstring link = url;
+    TrimInPlace(link);
+    // 文字列の前後の空白をその場で削除するユーティリティ
+
+    if (link.empty()) {
+        AppendLog(L"[OPEN] URL is empty.");
+        AppendLog(RET);
+        return false;
+    }
+    // "http://" などのスキームがない場合は "https://" を付与してみる
+    if (link.find(L"://") == std::wstring::npos) {
+        link = L"https://" + link;
+    }
+    HINSTANCE h = ShellExecuteW(g_hDlg, L"open", link.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    auto code = reinterpret_cast<INT_PTR>(h);
+    if (code <= 32) {
+        // 代表的なエラー値を簡単に表示
+        std::wstringstream ss;
+        ss << L"[OPEN] ShellExecute failed (" << code << L") : " << link;
+        AppendLog(RET);
+        AppendLog(ss.str());
+        return false;
+    }
+    AppendLog(L"[OPEN] Launched browser for: " + link);
     AppendLog(RET);
     return true;
 }
@@ -1592,6 +1795,15 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                     OpenFileWithDefaultEditor(p);
                 }break;
 
+				//TensorBoardを開く http://localhost:6006/
+                case IDC_BTN_OPENTENSORBOARD:
+                {
+                    if (HIWORD(wParam) != BN_CLICKED)
+                        return TRUE; // ← これを追加
+					StartTensorBoardDetached(GetText(hDlg, IDC_COMBO_WORKDIR), GetText(hDlg, IDC_COMBO_ACTIVATE),6006);
+                    OpenURLWithDefaultBrowser(L"http://localhost:6006/");
+				}break;
+
                 //ログをクリアする
                 case IDC_BTN_CLEARLOG:
                 {
@@ -1622,7 +1834,82 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 return TRUE;
             }
 		}// WM_COMMAND
+
+        case WM_APP_LOGAPPEND:
+        {
+            auto* p = reinterpret_cast<std::wstring*>(lParam);
+            if (p) {
+                // ※ここは UI スレッド。初めて RichEdit を触るのも UI スレッドだけ
+                LogAppendANSI(*p);   // ← 既存の追記関数:contentReference[oaicite:3]{index=3}
+                delete p;
+            }
+            return TRUE;
+        }
+        case WM_GETMINMAXINFO:
+        {
+            if (g_initCx > 0 && g_initCy > 0) 
+            {
+                LPMINMAXINFO p = (LPMINMAXINFO)lParam;
+                // 追跡サイズは「ウィンドウ外枠」単位なので、クライアント→ウィンドウ差分を一度計算
+                RECT rcWin{}, rcCli{};
+                GetWindowRect(hDlg, &rcWin);
+                GetClientRect(hDlg, &rcCli);
+                const int dX = (rcWin.right - rcWin.left) - (rcCli.right - rcCli.left);
+                const int dY = (rcWin.bottom - rcWin.top) - (rcCli.bottom - rcCli.top);
+                const int winW = g_initCx + dX;
+                const int winH_min = g_initCy + dY;
+
+                // 横は最小=最大=初期幅 → 横方向のリサイズを事実上禁止
+                p->ptMinTrackSize.x = winW;
+                p->ptMaxTrackSize.x = 32767;// winW;
+
+                // 縦は初期高さ以上（最大は任意に大きく）
+                p->ptMinTrackSize.y = winH_min;
+                p->ptMaxTrackSize.y = 32767;
+            }
+            return 0;
+        }
+
+        // 縦に伸びた分だけ IDC_LOG の高さを増やす（他は動かさない）
+        case WM_SIZE:
+        {
+            if (wParam == SIZE_MINIMIZED) return TRUE;
+
+            const int cx = LOWORD(lParam);
+            const int cy = HIWORD(lParam);
+
+            HWND hLog = GetDlgItem(hDlg, IDC_LOG);
+            if (hLog && g_initCx > 0 && g_initCy > 0) {
+                // 追加分
+                const int deltaW = cx - g_initCx;                  // クライアント幅の増分
+                int newW = g_logWidth + (deltaW > 0 ? deltaW : 0); // “拡大のみ”ならこのガード
+                if (newW < g_logWidth) newW = g_logWidth;          // 縮小も許可したいならこの2行は外す
+
+                const int deltaH = cy - g_initCy;                  // クライアント高さの増分
+                int newH = g_logHeight + (deltaH > 0 ? deltaH : 0);
+                if (newH < g_logHeight) newH = g_logHeight;
+
+                SetWindowPos(hLog, nullptr,
+                    g_logLeft, g_logTop,   // 左上は固定（左アンカー/上アンカー）
+                    newW, newH,
+                    SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+            //if (hLog && g_initCy > 0) {
+            //    const int deltaH = cy - g_initCy;                   // クライアント高さの増分
+            //    int newH = g_logHeight + (deltaH > 0 ? deltaH : 0); // 縮小させたくないなら0で打ち止め
+            //    if (newH < g_logHeight) newH = g_logHeight;         // “拡大のみ”にする場合
+
+            //    // 横幅は固定（g_logWidth）、X/Yも固定（g_logLeft/g_logTop）
+            //    SetWindowPos(hLog, nullptr,
+            //        g_logLeft, g_logTop,
+            //        g_logWidth, newH,
+            //        SWP_NOZORDER | SWP_NOACTIVATE);
+            //}
+            return TRUE;
+        }
+
         return FALSE;
+
 	} // switch (msg)
 	return FALSE; // デフォルトの処理へ
 }// DlgProc
