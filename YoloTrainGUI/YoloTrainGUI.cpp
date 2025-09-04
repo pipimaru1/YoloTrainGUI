@@ -95,6 +95,10 @@ static std::wstring strTipCfgYaml =
 L"不要な時は空欄にしてください。\r\n"
 L"ptファイルがあれば不要です。\r\n";
 
+static std::wstring strTipAutoEditYamlBtn =
+L"Tempフォルダをdata.yamlに適用します。\r\n";
+
+
 void SetTootips(HWND hDlg)
 {
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"Tempolary Directory", strTipTempDir.c_str());
@@ -106,6 +110,7 @@ void SetTootips(HWND hDlg)
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"Git Safe", strGitSafe.c_str());   
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"Python Env", strChkEnv.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_CFGYAML, L"CFG Yaml", strTipCfgYaml.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BUTTON_APPLY_YAML, L"CFG Yaml", strTipAutoEditYamlBtn.c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
