@@ -17,3 +17,10 @@ bool PickFileEx(HWND owner, const COMDLG_FILTERSPEC* spec, UINT nSpec,
     std::wstring& outPath, const std::wstring& initialDir, std::wstring _title);
 
 bool PickFileEx(HWND hDlg, UINT _ComboID, const COMDLG_FILTERSPEC* spec, std::wstring title = L"");
+
+bool UpdateYoloYamlTrainVal(
+    const std::filesystem::path& yamlPath,
+    const std::wstring& baseDirW, // 例: L"C:\\yolodata"
+    std::wstring& outMessage      // ログ用（UIに出すなど）
+);
+

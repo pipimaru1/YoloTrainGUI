@@ -209,3 +209,119 @@ bool PickFile(HWND owner, const COMDLG_FILTERSPEC* spec, UINT nSpec, std::wstrin
      }
      return false;
  }
+
+ //////////////////////////////////////////////////////////////////////////////
+ // data.yaml編集
+ // YoloTrainGUI.cpp など適切な場所に追加（ヘッダにプロトタイプ宣言してもOK）
+ using std::wstring;
+ using std::string;
+
+ static std::string ToForwardSlashes(const std::wstring& ws) {
+     std::wstring w = ws;
+     for (auto& ch : w) if (ch == L'\\') ch = L'/';
+     // UTF-16 -> UTF-8
+     int len = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+     std::string s(len, '\0');
+     WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), s.data(), len, nullptr, nullptr);
+     return s;
+ }
+
+ static bool ReadAllTextUTF8(const std::filesystem::path& path, std::string& out) {
+     std::ifstream ifs(path, std::ios::binary);
+     if (!ifs) return false;
+     std::ostringstream ss;
+     ss << ifs.rdbuf();
+     out = ss.str();
+     return true;
+ }
+
+ static bool WriteAllTextUTF8(const std::filesystem::path& path, const std::string& text) {
+     std::ofstream ofs(path, std::ios::binary | std::ios::trunc);
+     if (!ofs) return false;
+     ofs.write(text.data(), (std::streamsize)text.size());
+     return (bool)ofs;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////
+// 2) YAMLのtrain: / val : だけを安全に置換する関数
+// 行頭の空白や「train : 」「train:」「train: 値」などのゆらぎに対応
+// コメント行（#開始）は無視
+// 最初に見つかったtrain / valのみ置換（複数重複がなければ十分）
+ bool UpdateYoloYamlTrainVal(
+     const std::filesystem::path& yamlPath,
+     const std::wstring& baseDirW, // 例: L"C:\\yolodata"
+     std::wstring& outMessage      // ログ用（UIに出すなど）
+ ) {
+     std::string content;
+     if (!ReadAllTextUTF8(yamlPath, content)) {
+         outMessage = L"YAML読み込みに失敗: " + yamlPath.wstring();
+         return false;
+     }
+
+     // 新しい値（UTF-8, / 区切り）
+     std::wstring trainW = baseDirW + L"\\dataset\\train\\images";
+     std::wstring valW = baseDirW + L"\\dataset\\valid\\images";
+     std::string trainNew = ToForwardSlashes(trainW);
+     std::string valNew = ToForwardSlashes(valW);
+
+     // 行単位で処理
+     std::istringstream iss(content);
+     std::ostringstream oss;
+     std::string line;
+     bool trainReplaced = false;
+     bool valReplaced = false;
+
+     // 正規表現： ^(\s*)(train|val)\s*:\s*(.*)$
+     // 先頭空白とキーを保持して、値を差し替える
+     std::regex kvre{ R"(^(\s*)(train|val)\s*:\s*(.*)$)" };
+
+     while (std::getline(iss, line)) {
+         std::smatch m;
+         // コメント行はそのまま
+         std::string trimmed = line;
+         // 先頭の空白を飛ばして#ならコメント
+         auto nonsp = trimmed.find_first_not_of(" \t\r");
+         bool isComment = (nonsp != std::string::npos && trimmed[nonsp] == '#');
+
+         if (!isComment && std::regex_match(line, m, kvre)) {
+             std::string indent = m[1].str();
+             std::string key = m[2].str();
+
+             if (key == "train" && !trainReplaced) {
+                 oss << indent << "train: " << trainNew << "\n";
+                 trainReplaced = true;
+                 continue;
+             }
+             if (key == "val" && !valReplaced) {
+                 oss << indent << "val: " << valNew << "\n";
+                 valReplaced = true;
+                 continue;
+             }
+         }
+         // マッチしない行はそのまま
+         oss << line << "\n";
+     }
+
+     // バックアップ作成
+     std::error_code ec;
+     auto bak = yamlPath;
+     bak += L".bak";
+     std::filesystem::copy_file(yamlPath, bak, std::filesystem::copy_options::overwrite_existing, ec);
+
+     std::string out = oss.str();
+     if (!WriteAllTextUTF8(yamlPath, out)) {
+         outMessage = L"YAML書き込みに失敗: " + yamlPath.wstring();
+         return false;
+     }
+
+     std::wostringstream msg;
+     msg << L"更新完了: " << yamlPath.wstring() << L"\n"
+         << L"  train: " << std::filesystem::path(trainW).wstring() << L"\n"
+         << L"  val  : " << std::filesystem::path(valW).wstring();
+     if (!trainReplaced || !valReplaced) {
+         msg << L"\n(注意: trainまたはvalが見つからず、新規行の追加はしていません。必要なら追加ロジックを足してください。)";
+     }
+     outMessage = msg.str();
+     return true;
+ }
+

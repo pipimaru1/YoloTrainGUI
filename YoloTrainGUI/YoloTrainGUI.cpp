@@ -1812,6 +1812,49 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                     }
                 }break;
 
+                case IDC_BUTTON_APPLY_YAML:
+                {
+                    if (HIWORD(wParam) == BN_CLICKED) {
+                        // 1) UIから文字列取得
+                        wchar_t tempBuf[MAX_PATH * 4] = {};
+                        wchar_t yamlBuf[MAX_PATH * 4] = {};
+                        GetDlgItemTextW(hDlg, IDC_COMBO_TEMP, tempBuf, _countof(tempBuf));
+                        GetDlgItemTextW(hDlg, IDC_COMBO_YAML, yamlBuf, _countof(yamlBuf));
+
+                        // トリム（最低限）
+                        std::wstring tempDir = tempBuf;
+                        std::wstring yamlPathW = yamlBuf;
+
+                        // 空チェック
+                        if (tempDir.empty() || yamlPathW.empty()) {
+                            //MessageBoxW(hDlg, L"TEMPまたはYAMLパスが空です。", L"エラー", MB_ICONERROR);
+                            AppendLog(L"[YAML] TEMP or YAML path is empty.");
+                            AppendLog(RET);
+                            break;
+                        }
+
+                        // 末尾の \ / を除去（正規化しやすく）
+                        while (!tempDir.empty() && (tempDir.back() == L'\\' || tempDir.back() == L'/')) tempDir.pop_back();
+
+                        // 2) 実行
+                        std::wstring log;
+                        bool ok = UpdateYoloYamlTrainVal(std::filesystem::path(yamlPathW), tempDir, log);
+
+                        // 3) 結果表示（ログやリッチエディットに追加）
+                        if (ok) {
+                            //MessageBoxW(hDlg, log.c_str(), L"YAML更新", MB_ICONINFORMATION);
+                            AppendLog(L"[YAML] Updated YAML: " + yamlPathW);
+                            AppendLog(RET);
+                            // AppendToRichEdit(log); // 既存のログ関数があれば
+                        }
+                        else {
+                            //MessageBoxW(hDlg, log.c_str(), L"YAML更新失敗", MB_ICONERROR);
+                            AppendLog(L"[YAML] Failed to update YAML: " + yamlPathW);
+                            AppendLog(RET);
+                        }
+                    }
+                }break;
+
                 default:
                     //break;
                     return false;

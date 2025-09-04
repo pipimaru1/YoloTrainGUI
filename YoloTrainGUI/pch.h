@@ -40,4 +40,6 @@
 
 #include <wrl/client.h>
 
+#include <regex>
+
 #endif //PCH_H

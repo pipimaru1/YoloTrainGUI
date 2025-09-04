@@ -38,6 +38,7 @@
 #define IDC_CHK_LOG_CRLF2LF			1835   // チェックを入れると、ログファイルでCRLFをLFとする。
 #define IDC_BTN_CHKCRLF2LF          1836   // chk_crlf.pyを実行するボタン
 #define IDC_BTN_OPENTENSORBOARD     1837   // http://localhost:6006 を開くボタン
+#define IDC_BUTTON_APPLY_YAML		1838   // data.yamlを適用するボタン
 
 /*
 リソース追加手順
