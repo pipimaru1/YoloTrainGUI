@@ -23,7 +23,10 @@ static std::mutex g_storeMutex;
 // Globals
 // ------------------------------
 HWND g_hDlg = nullptr;
-std::atomic<HANDLE> g_hChildProc(nullptr);
+//std::atomic<HANDLE> g_hChildProc(nullptr);
+static std::atomic<HANDLE> g_hChildProc{ nullptr };
+static HANDLE g_hJob = NULL;  // ← 追加
+
 std::mutex g_logMutex;
 std::wstring g_logBuffer;
 
@@ -586,6 +589,17 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_laun
         return nullptr;
     }
 
+    // Job の用意（毎回作り直してOK）
+    if (g_hJob) { CloseHandle(g_hJob); g_hJob = NULL; }
+    g_hJob = CreateJobObjectW(nullptr, nullptr);
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION ji{};
+    ji.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    SetInformationJobObject(g_hJob, JobObjectExtendedLimitInformation, &ji, sizeof(ji));
+
+    // 起動したプロセス（cmd.exe）を Job に登録
+    AssignProcessToJobObject(g_hJob, pi.hProcess);
+
     // reader thread
     std::thread([hRead, piH = pi.hProcess]() {
         char buf[4096];
@@ -624,16 +638,36 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_laun
     g_hChildProc.store(pi.hProcess);
     return pi.hProcess;
 }
+//static void StopChild()
+//{
+//    HANDLE h = g_hChildProc.exchange(nullptr);
+//    if (h) {
+//        TerminateProcess(h, 1);
+//        CloseHandle(h);
+//        AppendLog(L"[EXEC] Terminated.");
+//        AppendLog(RET);
+//    }
+//}
 static void StopChild()
 {
+    // 先に Job を閉じる or 終了させる（ツリー全体を止める）
+    if (g_hJob) {
+        // すぐに全員に ExitCode=1 を投げたいなら TerminateJobObject
+        TerminateJobObject(g_hJob, 1);
+        CloseHandle(g_hJob);
+        g_hJob = NULL;
+    }
+
+    // 個別プロセスハンドルも後片付け（安全側）
     HANDLE h = g_hChildProc.exchange(nullptr);
     if (h) {
+        // 念のため（もう死んでいるはずだが）単体も殺して閉じる
         TerminateProcess(h, 1);
         CloseHandle(h);
-        AppendLog(L"[EXEC] Terminated.");
-        AppendLog(RET);
+        AppendLog(L"[EXEC] Terminated (job).");
     }
 }
+
 
 // ------------------------------
 // Helpers for building command
@@ -961,7 +995,8 @@ void TrainParams::DoTrain()
             if (resume.empty()) ss << L" resume=True";
             else                ss << L" resume=" << Quote(resume);
         }
-        if (chkCache == BST_CHECKED) ss << L" cache=True";
+        //if (chkCache == BST_CHECKED) ss << L" cache=True";
+        if (chkCache == BST_CHECKED) ss << L" cache=disk";
         if (exist_ok)                ss << L" exist_ok=True";
 
         if (!_NAME.empty())     ss << L" name=" << Quote(_NAME);
@@ -1246,14 +1281,23 @@ static void InitDialog(HWND hDlg)
     // 4) テキスト上限を拡大（任意：既定が小さい環境の保険）
     SendMessageW(hLog, EM_EXLIMITTEXT, 0, 16 * 1024 * 1024);  // 16MB
     // 5) 等幅フォントを既定に（日本語も等幅にしたいので MS ゴシック推奨）
+
     CHARFORMAT2 cf{}; cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE;
     cf.yHeight = 180; // 10pt（お好みで）
     lstrcpynW(cf.szFaceName, L"ＭＳ ゴシック", _countof(cf.szFaceName));
-    SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    //SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL | SCF_DEFAULT, (LPARAM)&cf);
     // ※欧文専用で良ければ "Consolas" でもOK（日本語は等幅になりません）
     // lstrcpynW(cf.szFaceName, L"Consolas", _countof(cf.szFaceName));
     // SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+
+
+
+    // 2.5) デュアルフォント無効化（英字/日本語での自動フォント切替を止める）
+    DWORD opts = (DWORD)SendMessageW(hLog, EM_GETLANGOPTIONS, 0, 0);
+    opts &= ~IMF_DUALFONT; // ← このビットだけ落として…
+    SendMessageW(hLog, EM_SETLANGOPTIONS, 0, opts); // ← 全体を“上書き”で戻す
 
     
     SendDlgItemMessageW(hDlg, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
