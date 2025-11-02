@@ -1,14 +1,12 @@
 #define _WIN32_WINNT 0x0601
 #include "pch.h"
-
 #include "tools.hpp"
-
 #include "resource.h"
 #include "resource_user.h"
-
 #include "YoloTrainGUI.h"
 #include "Tooltip.hpp"
 
+#define FILECOPY_PROGRESS_STEP 50 // ファイルコピーの進捗更新間隔（ミリ秒）
 // 例: 冒頭付近にID配列を置く
 static const UINT IDC_CMB_TRAIN_SRC[8] = {
     IDC_CMB_TRAIN_SRC_0, IDC_CMB_TRAIN_SRC_1, IDC_CMB_TRAIN_SRC_2, IDC_CMB_TRAIN_SRC_3,
@@ -353,7 +351,17 @@ void UpdateFolderCounter_Valid(HWND hDlg, const UINT ID_COMBO, const UINT ID_STA
     SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
 }
 
-
+///////////////////////////////////////////////////////////////////////////////////
+// チェックボックスの状態に応じて、コンボボックスを有効化/無効化
+///////////////////////////////////////////////////////////////////////////////////
+void ApplyEnableFromCheck(HWND hDlg, UINT idChk, UINT idCombo)
+{
+    if (!hDlg) return;
+    const BOOL enabled = (IsDlgButtonChecked(hDlg, idChk) == BST_CHECKED);
+    if (HWND hCombo = GetDlgItem(hDlg, idCombo)) {
+        EnableWindow(hCombo, enabled);
+    }
+}
 
 /////////////////////////////////////////////////////////////////////////////////
 // メインウィンドウへログ送信
@@ -409,6 +417,11 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 }
             }
 
+            for (int i = 0; i < 8; ++i) {
+                ApplyEnableFromCheck(hDlg, IDC_CHK_TRAIN_EN_0 + i, IDC_CMB_TRAIN_SRC_0 + i);
+                ApplyEnableFromCheck(hDlg, IDC_CHK_VALID_EN_0 + i, IDC_CMB_VALID_SRC_0 + i);
+            }
+
             //LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_MCOPY_TEMP), L"Temp Dir");
             if (HWND hCmbV = GetDlgItem(hDlg, IDC_COMBO_TEMP_MCOPY)) {
                 const std::wstring secV = L"Temp Dir";
@@ -452,6 +465,35 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
             switch (LOWORD(wParam))
             {
+				//チェックボックスの状態に応じてコンボを有効化/無効化
+                case IDC_CHK_TRAIN_EN_0:
+                case IDC_CHK_TRAIN_EN_1:
+                case IDC_CHK_TRAIN_EN_2:
+                case IDC_CHK_TRAIN_EN_3:
+                case IDC_CHK_TRAIN_EN_4:
+                case IDC_CHK_TRAIN_EN_5:
+                case IDC_CHK_TRAIN_EN_6:
+                case IDC_CHK_TRAIN_EN_7:
+                    if (HIWORD(wParam) == BN_CLICKED) {
+                        UINT idx = LOWORD(wParam) - IDC_CHK_TRAIN_EN_0;
+                        ApplyEnableFromCheck(hDlg, LOWORD(wParam), IDC_CMB_TRAIN_SRC_0 + idx);
+                    }
+                    return TRUE;
+
+                case IDC_CHK_VALID_EN_0:
+                case IDC_CHK_VALID_EN_1:
+                case IDC_CHK_VALID_EN_2:
+                case IDC_CHK_VALID_EN_3:
+                case IDC_CHK_VALID_EN_4:
+                case IDC_CHK_VALID_EN_5:
+                case IDC_CHK_VALID_EN_6:
+                case IDC_CHK_VALID_EN_7:
+                    if (HIWORD(wParam) == BN_CLICKED) {
+                        UINT idx = LOWORD(wParam) - IDC_CHK_VALID_EN_0;
+                        ApplyEnableFromCheck(hDlg, LOWORD(wParam), IDC_CMB_VALID_SRC_0 + idx);
+                    }
+                    return TRUE;
+
                 case IDC_BTN_TRAIN_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_0); break;
                 case IDC_BTN_TRAIN_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_1); break;
                 case IDC_BTN_TRAIN_BROWSE_2: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_2, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_2); break;
@@ -582,8 +624,10 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                         setPos(int((cur * 100) / total));
 
                                     // ★Nファイルごとに現在ファイルをログ（多すぎないよう適度に）
-                                    if ((++tick % 200) == 0) {
+                                    if ((++tick % FILECOPY_PROGRESS_STEP) == 0) {
                                         LogToMain(L"[COPY] ... " + e.path().filename().wstring() + L"\r\n");
+                                        UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
+                                        UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
                                     }
                                 }
                             }   
@@ -627,10 +671,7 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
                         EnableWindow(GetDlgItem(hDlg, IDC_BTN_COPY_TO_TEMP), TRUE);
                         MessageBeep(MB_OK);
-                        }).detach();
-
-                    UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
-                    UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
+                    }).detach();
 
                     return TRUE;
                 }
