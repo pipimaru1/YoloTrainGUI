@@ -11,11 +11,32 @@ extern HWND g_hDlg;
 extern std::atomic<HANDLE> g_hChildProc;
 extern std::mutex g_logMutex;
 extern std::wstring g_logBuffer;
+extern const wchar_t* RET;
+extern bool _IDC_CHK_LOG_CRLF2LF;// = false;
 
+
+//
 void LogAppendANSI(const std::wstring& s);
 void AppendLog(const std::wstring& s);
 
-extern bool _IDC_CHK_LOG_CRLF2LF;// = false;
+// ------------------------------
+// Utilities
+// ------------------------------
+std::wstring GetText(HWND hDlg, int id);
+void SaveMRU(const std::wstring& section, const std::wstring& value, size_t maxItems = 256);
+void LoadMRUToCombo(HWND hCombo, const std::wstring& section);
+std::vector<std::wstring> LoadMRU(const std::wstring& section);
+bool LoadFlagFromIni(const wchar_t* key, bool def = false);
+std::string ToUTF8(const std::wstring& w);
+std::wstring FromUTF8(const std::string& s);
+void DoClearTemp(HWND hOwner, bool confirm = true, bool keepRoot = false);
+
+
+// ------------------------------
+// CopyMultiDlgÇÃProc
+INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
+
 
 // ó·: YoloTrainGUI.h Ç»Ç«ã§í Ç≈å©Ç¶ÇÈèÍèä
 #define WM_APP_LOGAPPEND   (WM_APP + 100)
@@ -78,4 +99,31 @@ public:
     void DoTrain();
 //    void DoTrain_old();
 
+};
+
+// ------------------------------
+// MultiCopy
+// ------------------------------
+class MultiCopyParams {
+
+private:
+    std::wstring src_dir;
+
+    //MultiCopyDlgóp
+    std::vector<std::wstring> src_dir_trains;
+    std::vector<std::wstring> src_dir_valids;
+    std::vector<bool>         src_dir_train_chks;
+    std::vector<bool>         src_dir_valid_chks;
+
+public:
+    MultiCopyParams()
+    {
+        src_dir_trains.resize(8);
+        src_dir_valids.resize(8);
+        src_dir_train_chks.resize(8);
+        src_dir_valid_chks.resize(8);
+    }
+
+    int ReadControls(HWND hDlg);
+    int SaveCurrentSettingsToIni(HWND hDlg);
 };

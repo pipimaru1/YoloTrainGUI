@@ -42,4 +42,6 @@
 
 #include <regex>
 
+namespace fs = std::filesystem;
+
 #endif //PCH_H

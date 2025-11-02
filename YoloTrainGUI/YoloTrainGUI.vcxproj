@@ -164,6 +164,7 @@ call $(SolutionDir)\update.bat</Command>
     <ClCompile Include="tools.cpp" />
     <ClCompile Include="YoloTrainGUI.cpp" />
     <ClCompile Include="richedit.cpp" />
+    <ClCompile Include="YoloTrainGUI_mcopy_dbox.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="YoloTrainGUI.rc" />

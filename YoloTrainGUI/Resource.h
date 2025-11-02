@@ -3,6 +3,7 @@
 // YoloTrainGUI.rc で使用
 //
 #define VS_VERSION_INFO                 1
+#define IDCANCEL2                       3
 #define IDD_MAIN                        101
 #define IDC_COMBO_IMG                   1001
 #define IDC_BTN_BROWSE_IMG              1002
@@ -45,14 +46,85 @@
 #define IDC_PROGRESS                    1060
 #define IDC_LOG                         1070
 #define IDC_STC_TEMP                    1073
+#define IDC_BTN_OPEN_COPY_MULTI         1074
+#define IDD_COPY_MULTI                  1200
+#define IDC_PROGRESS_COPY               1201
+#define IDC_BTN_COPY_TO_TEMP            1202
+#define IDC_BTN_CLEARTMP_MCOPY          1204
+#define IDC_COMBO_TEMP_MCOPY            1205
+#define IDC_BTN_BROWSE_TEMP_MCOPY       1206
+#define IDC_CMB_TRAIN_SRC_0             1210
+#define IDC_CMB_TRAIN_SRC_1             1211
+#define IDC_CMB_TRAIN_SRC_2             1212
+#define IDC_CMB_TRAIN_SRC_3             1213
+#define IDC_CMB_TRAIN_SRC_4             1214
+#define IDC_CMB_TRAIN_SRC_5             1215
+#define IDC_CMB_TRAIN_SRC_6             1216
+#define IDC_CMB_TRAIN_SRC_7             1217
+#define IDC_BTN_TRAIN_BROWSE_0          1220
+#define IDC_BTN_TRAIN_BROWSE_1          1221
+#define IDC_BTN_TRAIN_BROWSE_2          1222
+#define IDC_BTN_TRAIN_BROWSE_3          1223
+#define IDC_BTN_TRAIN_BROWSE_4          1224
+#define IDC_BTN_TRAIN_BROWSE_5          1225
+#define IDC_BTN_TRAIN_BROWSE_6          1226
+#define IDC_BTN_TRAIN_BROWSE_7          1227
+#define IDC_CHK_TRAIN_EN_0              1230
+#define IDC_CHK_TRAIN_EN_1              1231
+#define IDC_CHK_TRAIN_EN_2              1232
+#define IDC_CHK_TRAIN_EN_3              1233
+#define IDC_CHK_TRAIN_EN_4              1234
+#define IDC_CHK_TRAIN_EN_5              1235
+#define IDC_CHK_TRAIN_EN_6              1236
+#define IDC_CHK_TRAIN_EN_7              1237
+#define IDC_CMB_VALID_SRC_0             1240
+#define IDC_CMB_VALID_SRC_1             1241
+#define IDC_CMB_VALID_SRC_2             1242
+#define IDC_CMB_VALID_SRC_3             1243
+#define IDC_CMB_VALID_SRC_4             1244
+#define IDC_CMB_VALID_SRC_5             1245
+#define IDC_CMB_VALID_SRC_6             1246
+#define IDC_CMB_VALID_SRC_7             1247
+#define IDC_BTN_VALID_BROWSE_0          1250
+#define IDC_BTN_VALID_BROWSE_1          1251
+#define IDC_BTN_VALID_BROWSE_2          1252
+#define IDC_BTN_VALID_BROWSE_3          1253
+#define IDC_BTN_VALID_BROWSE_4          1254
+#define IDC_BTN_VALID_BROWSE_5          1255
+#define IDC_BTN_VALID_BROWSE_6          1256
+#define IDC_BTN_VALID_BROWSE_7          1257
+#define IDC_CHK_VALID_EN_0              1260
+#define IDC_CHK_VALID_EN_1              1261
+#define IDC_CHK_VALID_EN_2              1262
+#define IDC_CHK_VALID_EN_3              1263
+#define IDC_CHK_VALID_EN_4              1264
+#define IDC_CHK_VALID_EN_5              1265
+#define IDC_CHK_VALID_EN_6              1266
+#define IDC_CHK_VALID_EN_7              1267
+#define IDC_STATIC_TRAIN_SRC_0          1270
+#define IDC_STATIC_TRAIN_SRC_1          1271
+#define IDC_STATIC_TRAIN_SRC_2          1272
+#define IDC_STATIC_TRAIN_SRC_3          1273
+#define IDC_STATIC_TRAIN_SRC_4          1274
+#define IDC_STATIC_TRAIN_SRC_5          1275
+#define IDC_STATIC_TRAIN_SRC_6          1276
+#define IDC_STATIC_TRAIN_SRC_7          1277
+#define IDC_STATIC_VALID_SRC_0          1280
+#define IDC_STATIC_VALID_SRC_1          1281
+#define IDC_STATIC_VALID_SRC_2          1282
+#define IDC_STATIC_VALID_SRC_3          1283
+#define IDC_STATIC_VALID_SRC_4          1284
+#define IDC_STATIC_VALID_SRC_5          1285
+#define IDC_STATIC_VALID_SRC_6          1286
+#define IDC_STATIC_VALID_SRC_7          1287
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        101
+#define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1068
+#define _APS_NEXT_CONTROL_VALUE         1076
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

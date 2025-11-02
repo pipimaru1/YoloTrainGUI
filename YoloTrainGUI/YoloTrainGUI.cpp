@@ -137,14 +137,16 @@ static void PostLogToUi(const std::wstring& s) {
 // 文字コード変換＆保存先パスユーティリティ
 // ------------------------------
 
-static std::string ToUTF8(const std::wstring& w) {
+//static 
+std::string ToUTF8(const std::wstring& w) {
     if (w.empty()) return {};
     int len = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
     std::string s(len, '\0');
     WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), s.data(), len, nullptr, nullptr);
     return s;
 }
-static std::wstring FromUTF8(const std::string& s) {
+//static 
+std::wstring FromUTF8(const std::string& s) {
     if (s.empty()) return {};
     int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
     std::wstring w(len, L'\0');
@@ -242,10 +244,16 @@ static void WriteIniColon(const std::map<std::wstring, std::vector<std::wstring>
     ofs.write(u8.data(), (std::streamsize)u8.size());
 }
 
-
 // ------------------------------
 // Utilities
 // ------------------------------
+
+std::wstring GetText(HWND hDlg, int id)
+{
+    wchar_t tmp[4096];
+    GetDlgItemTextW(hDlg, id, tmp, 4096);
+    return tmp;
+}
 
 static void SetProgress(int v)
 {
@@ -257,14 +265,17 @@ static void ResetProgress()
     SetProgress(0);
 }
 
-static std::vector<std::wstring> LoadMRU(const std::wstring& section)
+//static 
+std::vector<std::wstring> LoadMRU(const std::wstring& section)
 {
     auto m = ReadIniColon();
     auto it = m.find(section);
     if (it == m.end()) return {};
     return it->second;
 }
-static void SaveMRU(const std::wstring& section, const std::wstring& value, size_t maxItems = 256)
+
+//static 
+void SaveMRU(const std::wstring& section, const std::wstring& value, size_t maxItems)
 {
     if (value.empty()) return;
     auto m = ReadIniColon();
@@ -275,7 +286,9 @@ static void SaveMRU(const std::wstring& section, const std::wstring& value, size
     if (v.size() > maxItems) v.resize(maxItems);
     WriteIniColon(m);
 }
-static void LoadMRUToCombo(HWND hCombo, const std::wstring& section)
+
+//static 
+void LoadMRUToCombo(HWND hCombo, const std::wstring& section)
 {
     SendMessageW(hCombo, CB_RESETCONTENT, 0, 0);
     for (auto& s : LoadMRU(section)) {
@@ -308,7 +321,8 @@ std::wstring LoadMRUToString(const std::wstring& section)
 }
 
 // --- Flags loader for simple 0/1 states in mru_history.ini ---
-static bool LoadFlagFromIni(const wchar_t* key, bool def = false)
+//static 
+bool LoadFlagFromIni(const wchar_t* key, bool def)// = false)
 {
     auto v = LoadMRU(key);               // section=key の先頭要素を採用（"1" or "0"想定）
     if (v.empty()) return def;
@@ -679,12 +693,6 @@ static std::wstring Quote(const std::wstring& s)
         return L"\"" + s + L"\"";
     return s;
 }
-static std::wstring GetText(HWND hDlg, int id)
-{
-    wchar_t tmp[4096]; GetDlgItemTextW(hDlg, id, tmp, 4096);
-    return tmp;
-}
-
 
 //////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -802,6 +810,84 @@ int TrainParams::ReadControls(HWND hDlg)
         task = L"classify";
     }
     return 0;
+
+    //MultiCopyDlg用
+}
+
+
+// どこか共通の .cpp（YoloTrainGUI.cpp でも可）に置く
+// #include <filesystem>
+// #include <atomic>
+// 再入ガード（関数スコープ静的）
+
+static std::atomic<bool> g_clearTempRunning{ false };
+
+// keepRoot = false: ルートごと削除（従来メインの挙動）
+// keepRoot = true : ルートは残して「中身だけ」削除
+//static 
+void DoClearTemp(HWND hOwner, bool confirm, bool keepRoot)
+{
+    if (g_clearTempRunning.exchange(true)) {
+        // すでに実行中なら何もしない
+        return;
+    }
+
+    // 進捗バーがメイン/サブどちらにあるか不定なので控えめに使う
+    auto setProgress = [&](int pct) {
+        HWND hPrg = GetDlgItem(hOwner, IDC_PROGRESS_COPY); // サブにある想定
+        if (hPrg) SendMessageW(hPrg, PBM_SETPOS, pct, 0);
+        };
+
+    try {
+        std::wstring tempDir = GetText(hOwner, IDC_COMBO_TEMP);
+        if (tempDir.empty()) {
+            AppendLog(L"[TEMP] Temp directory is not set."); AppendLog(RET);
+            g_clearTempRunning = false; return;
+        }
+        fs::path tempPath(tempDir);
+        if (!fs::exists(tempPath)) {
+            AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring()); AppendLog(RET);
+            g_clearTempRunning = false; return;
+        }
+
+        if (confirm) {
+            int r = MessageBoxW(hOwner,
+                L"Temp directory will be cleared. Continue?",
+                L"Confirm",
+                MB_OKCANCEL | MB_ICONWARNING);
+            if (r != IDOK) {
+                AppendLog(L"[TEMP] Clear operation cancelled."); AppendLog(RET);
+                g_clearTempRunning = false; return;
+            }
+        }
+
+        setProgress(0);
+
+        if (keepRoot) {
+            // ルートは残し、中身だけ削除
+            std::error_code ec;
+            for (auto it = fs::directory_iterator(tempPath, fs::directory_options::skip_permission_denied, ec);
+                it != fs::directory_iterator(); ++it)
+            {
+                fs::remove_all(it->path(), ec); // 失敗しても継続
+            }
+        }
+        else {
+            // ルートごと削除（従来メインのコードと同等）
+            fs::remove_all(tempPath);
+        }
+
+        setProgress(100);
+        AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
+        AppendLog(RET);
+    }
+    catch (const fs::filesystem_error& e) {
+        std::wstring msg = FromUTF8(e.what());
+        AppendLog(L"[TEMP] Error clearing temp directory: " + msg);
+        AppendLog(RET);
+    }
+
+    g_clearTempRunning = false;
 }
 
 /////////////////////////////////////////////////////////////
@@ -1292,8 +1378,6 @@ static void InitDialog(HWND hDlg)
     // lstrcpynW(cf.szFaceName, L"Consolas", _countof(cf.szFaceName));
     // SendMessageW(hLog, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
-
-
     // 2.5) デュアルフォント無効化（英字/日本語での自動フォント切替を止める）
     DWORD opts = (DWORD)SendMessageW(hLog, EM_GETLANGOPTIONS, 0, 0);
     opts &= ~IMF_DUALFONT; // ← このビットだけ落として…
@@ -1603,6 +1687,10 @@ static bool OpenURLWithDefaultBrowser(const std::wstring& url)
 // ------------------------------
 static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    //WORD id = 0;            // = LOWORD(wParam);
+    //WORD code = 0;          // = HIWORD(wParam);
+    //HWND hFrom = nullptr;   // = (HWND)lParam;
+
     switch (msg) {
         case WM_INITDIALOG:
         {
@@ -1617,8 +1705,33 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
             //    else                ShowTempTipAtCursor(hDlg);
             //    return TRUE;
             //}
+            //id = LOWORD(wParam);
+            //code = HIWORD(wParam);
+            //hFrom = (HWND)lParam;
+
+            //switch (id)
             switch (LOWORD(wParam))
             {
+                case IDC_BTN_OPEN_COPY_MULTI:
+                {
+                    // 親はメインダイアログ、インスタンスは親ウィンドウから取得
+                    HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr(hDlg, GWLP_HINSTANCE);
+
+                    // モーダルで開く
+                    INT_PTR ret = DialogBoxParamW(
+                        hInst,
+                        MAKEINTRESOURCEW(IDD_COPY_MULTI),
+                        hDlg,
+                        CopyMultiDlgProc,
+                        0);
+
+                    // 失敗チェック（必要ならログ出力など）
+                    if (ret == -1) {
+                        // 例: AppendLog(L"[ERROR] IDD_COPY_MULTI dialog failed.\r\n");
+                    }
+                    return TRUE;
+                }
+
                 case IDC_BTN_BROWSE_IMG: 
 					PickFolderEx(hDlg, IDC_COMBO_IMG, L"Original IMAGE Directory");
                 break;
@@ -1702,38 +1815,41 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 //TempDirのディレクトリの下にあるディレクトリ、ファイル消去する。
                 case IDC_BTN_CLEARTMP:
                 {
-                    if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加
+                    if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ノイズ排除
+                    DoClearTemp(hDlg, /*confirm*/true, /*keepRoot*/false); // 従来通り「ルートごと削除」
+                    //return TRUE;
 
-                    std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
-                    if (tempDir.empty()) {
-                        AppendLog(L"[TEMP] Temp directory is not set.");
-                        AppendLog(RET);
-                        return TRUE;
-                    }
-                    fs::path tempPath(tempDir);
-                    if (!fs::exists(tempPath)) {
-                        AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring());
-                        AppendLog(RET);
-                        return TRUE;
-                    }
-                    //一応本当に消すか確認する
-                    int _ret = MessageBoxW(hDlg, L"Temp directory will be cleared. Continue?", L"Confirm", MB_OKCANCEL | MB_ICONWARNING);
-                    if (_ret == IDOK) {
-                        try {
-                            fs::remove_all(tempPath);
-                            AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
-                        }
-                        catch (const fs::filesystem_error& e) {
-                            std::wstring _tmp = FromUTF8(e.what());
-                            AppendLog(L"[TEMP] Error clearing temp directory: " + _tmp);
-                        }
-                    }
-                    else {
-                        AppendLog(L"[TEMP] Clear operation cancelled.");
-                        AppendLog(RET);
-                        return TRUE;
-                    }
-                    AppendLog(RET);
+                    //if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加
+                    //std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
+                    //if (tempDir.empty()) {
+                    //    AppendLog(L"[TEMP] Temp directory is not set.");
+                    //    AppendLog(RET);
+                    //    return TRUE;
+                    //}
+                    //fs::path tempPath(tempDir);
+                    //if (!fs::exists(tempPath)) {
+                    //    AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring());
+                    //    AppendLog(RET);
+                    //    return TRUE;
+                    //}
+                    ////一応本当に消すか確認する
+                    //int _ret = MessageBoxW(hDlg, L"Temp directory will be cleared. Continue?", L"Confirm", MB_OKCANCEL | MB_ICONWARNING);
+                    //if (_ret == IDOK) {
+                    //    try {
+                    //        fs::remove_all(tempPath);
+                    //        AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
+                    //    }
+                    //    catch (const fs::filesystem_error& e) {
+                    //        std::wstring _tmp = FromUTF8(e.what());
+                    //        AppendLog(L"[TEMP] Error clearing temp directory: " + _tmp);
+                    //    }
+                    //}
+                    //else {
+                    //    AppendLog(L"[TEMP] Clear operation cancelled.");
+                    //    AppendLog(RET);
+                    //    return TRUE;
+                    //}
+                    //AppendLog(RET);
                 } break; //IDC_BTN_CLEARTMP
 
                 case IDC_BTN_BROWSE_PYTHON: {
