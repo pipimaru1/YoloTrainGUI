@@ -825,7 +825,7 @@ static std::atomic<bool> g_clearTempRunning{ false };
 // keepRoot = false: ルートごと削除（従来メインの挙動）
 // keepRoot = true : ルートは残して「中身だけ」削除
 //static 
-void DoClearTemp(HWND hOwner, bool confirm, bool keepRoot)
+void DoClearTemp(HWND hOwner,const UINT _ID_COMBO_TEMP, bool confirm, bool keepRoot)
 {
     if (g_clearTempRunning.exchange(true)) {
         // すでに実行中なら何もしない
@@ -839,7 +839,8 @@ void DoClearTemp(HWND hOwner, bool confirm, bool keepRoot)
         };
 
     try {
-        std::wstring tempDir = GetText(hOwner, IDC_COMBO_TEMP);
+        //std::wstring tempDir = GetText(hOwner, IDC_COMBO_TEMP);
+        std::wstring tempDir = GetText(hOwner, _ID_COMBO_TEMP);
         if (tempDir.empty()) {
             AppendLog(L"[TEMP] Temp directory is not set."); AppendLog(RET);
             g_clearTempRunning = false; return;
@@ -1816,7 +1817,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 case IDC_BTN_CLEARTMP:
                 {
                     if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ノイズ排除
-                    DoClearTemp(hDlg, /*confirm*/true, /*keepRoot*/false); // 従来通り「ルートごと削除」
+                    DoClearTemp(hDlg, IDC_COMBO_TEMP, /*confirm*/true, /*keepRoot*/false); // 従来通り「ルートごと削除」
                     //return TRUE;
 
                     //if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加

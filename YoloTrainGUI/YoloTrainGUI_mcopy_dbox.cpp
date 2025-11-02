@@ -292,66 +292,6 @@ uint64_t CountFilesUnder(const fs::path& root)
     return cnt;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// 1行分（Train/Valid それぞれ）の表示を更新
-////////////////////////////////////////////////////////////////////////////////
-//static 
-/*
-void UpdateFolderCountRow(HWND hDlg, int rowIndex)
-{
-    if (rowIndex < 0 || rowIndex >= 8) 
-        return;
-
-    // ---- Train 側 ----
-    {
-        std::wstring root = GetComboText(GetDlgItem(hDlg, IDC_CMB_TRAIN_SRC[rowIndex]));
-        std::wstring text;
-        if (!root.empty())
-        {
-            fs::path p(root);
-            uint64_t nImg = CountFilesUnder(p / L"images");
-            uint64_t nLbl = CountFilesUnder(p / L"labels");
-            uint64_t nTot = nImg + nLbl;
-            text = L"images: " + std::to_wstring(nImg)
-                + L"  labels: " + std::to_wstring(nLbl)
-                + L"  total: " + std::to_wstring(nTot);
-        }
-        else {
-            text = L"-";
-        }
-        SetDlgItemTextW(hDlg, IDC_STC_TRAIN_SRC[rowIndex], text.c_str());
-    }
-
-    // ---- Valid 側 ----
-    {
-        std::wstring root = GetComboText(GetDlgItem(hDlg, IDC_CMB_VALID_SRC[rowIndex]));
-        std::wstring text;
-        if (!root.empty())
-        {
-            fs::path p(root);
-            uint64_t nImg = CountFilesUnder(p / L"images");
-            uint64_t nLbl = CountFilesUnder(p / L"labels");
-            uint64_t nTot = nImg + nLbl;
-            text = L"images: " + std::to_wstring(nImg)
-                + L"  labels: " + std::to_wstring(nLbl)
-                + L"  total: " + std::to_wstring(nTot);
-        }
-        else {
-            text = L"-";
-        }
-        SetDlgItemTextW(hDlg, IDC_STC_VALID_SRC[rowIndex], text.c_str());
-    }
-}
-// 全行をまとめて更新
-static void UpdateAllFolderCounts(HWND hDlg)
-{
-    for (int i = 0; i < 8; ++i) {
-        UpdateFolderCountRow(hDlg, i);
-    }
-}
-
-*/
-
 void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
 {
     std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
@@ -362,7 +302,9 @@ void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT
         uint64_t nImg = CountFilesUnder(p / L"images");
         uint64_t nLbl = CountFilesUnder(p / L"labels");
         uint64_t nTot = nImg + nLbl;
-        text = std::to_wstring(nTot);
+
+        //text = std::to_wstring(nTot);
+		text = std::to_wstring(nImg); // 画像数のみ表示
     }
     else {
         text = L"-";
@@ -370,6 +312,46 @@ void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT
     SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
 }
 
+//テンポラリフォルダ用Train
+void UpdateFolderCounter_Train(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
+{
+    std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
+    std::wstring text;
+    if (!root.empty())
+    {
+        fs::path p(root);
+        uint64_t nImg = CountFilesUnder(p / L"dataset" / L"train" / L"images");
+        uint64_t nLbl = CountFilesUnder(p / L"dataset" / L"train" / L"labels");
+        uint64_t nTot = nImg + nLbl;
+
+        //text = std::to_wstring(nTot);
+        text = std::to_wstring(nImg); // 画像数のみ表示
+    }
+    else {
+        text = L"-";
+    }
+    SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
+}
+//テンポラリフォルダ用Valid
+void UpdateFolderCounter_Valid(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
+{
+    std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
+    std::wstring text;
+    if (!root.empty())
+    {
+        fs::path p(root);
+        uint64_t nImg = CountFilesUnder(p / L"dataset" / L"valid" / L"images");
+        uint64_t nLbl = CountFilesUnder(p / L"dataset" / L"valid" / L"labels");
+        uint64_t nTot = nImg + nLbl;
+
+        //text = std::to_wstring(nTot);
+        text = std::to_wstring(nImg); // 画像数のみ表示
+    }
+    else {
+        text = L"-";
+    }
+    SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
+}
 
 
 
@@ -455,7 +437,9 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_6, IDC_STATIC_VALID_SRC_6);
 			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_7, IDC_STATIC_VALID_SRC_7);
 
-    
+            UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
+            UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
+
             // （任意）先頭コンボにフォーカス
             if (HWND hFirst = GetDlgItem(hDlg, IDC_CMB_TRAIN_SRC[0])) {
                 SetFocus(hFirst);
@@ -477,14 +461,14 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 case IDC_BTN_TRAIN_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_6); break;
                 case IDC_BTN_TRAIN_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_7, IDC_STATIC_TRAIN_SRC_7); break;
 
-                case IDC_BTN_VALID_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_0); break;
-                case IDC_BTN_VALID_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_1); break;
-                case IDC_BTN_VALID_BROWSE_2: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_2, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_2); break;
-                case IDC_BTN_VALID_BROWSE_3: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_3, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_3, IDC_STATIC_TRAIN_SRC_3); break;
-                case IDC_BTN_VALID_BROWSE_4: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_4, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_4, IDC_STATIC_TRAIN_SRC_4); break;
-                case IDC_BTN_VALID_BROWSE_5: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_5, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_5); break;
-                case IDC_BTN_VALID_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_6); break;
-                case IDC_BTN_VALID_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_7, IDC_STATIC_TRAIN_SRC_7); break;
+                case IDC_BTN_VALID_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_0, IDC_STATIC_VALID_SRC_0); break;
+                case IDC_BTN_VALID_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_1, IDC_STATIC_VALID_SRC_1); break;
+                case IDC_BTN_VALID_BROWSE_2: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_2, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_2, IDC_STATIC_VALID_SRC_2); break;
+                case IDC_BTN_VALID_BROWSE_3: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_3, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_3, IDC_STATIC_VALID_SRC_3); break;
+                case IDC_BTN_VALID_BROWSE_4: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_4, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_4, IDC_STATIC_VALID_SRC_4); break;
+                case IDC_BTN_VALID_BROWSE_5: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_5, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_5, IDC_STATIC_VALID_SRC_5); break;
+                case IDC_BTN_VALID_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_6, IDC_STATIC_VALID_SRC_6); break;
+                case IDC_BTN_VALID_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_7, IDC_STATIC_VALID_SRC_7); break;
 
                 case IDC_BTN_BROWSE_TEMP_MCOPY: {
                     PickFolderEx(hDlg, IDC_COMBO_TEMP_MCOPY, L"Tempolary Source Directory");
@@ -493,7 +477,10 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     if (hMain) {
                         std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
                         SetComboText(GetDlgItem(hMain, IDC_COMBO_TEMP), tempDir);
-					}
+
+                        UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
+                        UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
+                    }
                 } break;
                 
                 //  一時フォルダクリアボタン
@@ -502,92 +489,15 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 					if (HIWORD(wParam) != BN_CLICKED) //ボタンがクリックされた場合のみ処理
                         return TRUE;
                     AppendLog(L"[TEMP] Clear requested."); AppendLog(RET);
-                    DoClearTemp(hDlg, true, false);
+                    DoClearTemp(hDlg, IDC_COMBO_TEMP_MCOPY, true, false);
+                    UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
+                    UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
                     AppendLog(L"[TEMP] Clear request done."); AppendLog(RET);
-                         return TRUE;
+                    return TRUE;
 
                 } break; //IDC_BTN_CLEARTMP
 
-				//  コピー実行ボタン
-                /*
-                case IDC_BTN_COPY_TO_TEMP+9999:
-                {
-                    // 1) 入力収集（train/valid の 0 番だけ使用）と有効チェック
-                    std::wstring trainRoot = GetComboText(GetDlgItem(hDlg, IDC_CMB_TRAIN_SRC_0));
-                    std::wstring validRoot = GetComboText(GetDlgItem(hDlg, IDC_CMB_VALID_SRC_0));
-                    const bool useTrain = (IsDlgButtonChecked(hDlg, IDC_CHK_TRAIN_EN_0) == BST_CHECKED);
-                    const bool useValid = (IsDlgButtonChecked(hDlg, IDC_CHK_VALID_EN_0) == BST_CHECKED);
-
-                    // 2) Temp ルート（親のメインダイアログから取得）
-                    HWND hMain = GetParent(hDlg);
-                    if (!hMain) { 
-                        MessageBoxW(hDlg, L"No parent dialog.", L"Error", MB_ICONERROR); break; 
-                    }
-                    std::wstring tempRoot = GetComboText(GetDlgItem(hMain, IDC_COMBO_TEMP));
-                    if (tempRoot.empty()) 
-                    {
-                        MessageBoxW(hDlg, L"Temp folder is empty.", L"Error", MB_ICONERROR); break; 
-                    }
-
-                    // 3) 何も有効でなければ終了
-                    if ((!useTrain || trainRoot.empty()) && (!useValid || validRoot.empty())) {
-                        MessageBoxW(hDlg, L"No valid source selected.", L"Info", MB_ICONINFORMATION);
-                        break;
-                    }
-
-                    // 4) UI無効化
-                    EnableWindow(GetDlgItem(hDlg, IDC_BTN_COPY_TO_TEMP), FALSE);
-
-                    // 5) スレッド起動
-                    std::thread([=]() {
-                        // パス構築
-                        fs::path temp = fs::path(tempRoot);
-                        fs::path dTrainImg = temp / L"dataset" / L"train" / L"images";
-                        fs::path dTrainLbl = temp / L"dataset" / L"train" / L"labels";
-                        fs::path dValidImg = temp / L"dataset" / L"valid" / L"images";
-                        fs::path dValidLbl = temp / L"dataset" / L"valid" / L"labels";
-
-                        // 出力先を作成
-                        EnsureDirIfMissing(dTrainImg); EnsureDirIfMissing(dTrainLbl);
-                        EnsureDirIfMissing(dValidImg); EnsureDirIfMissing(dValidLbl);
-
-                        // 総数カウント
-                        uint64_t total = 0;
-                        if (useTrain && !trainRoot.empty())
-                            total += CountImagesLabels(fs::path(trainRoot));
-                        if (useValid && !validRoot.empty())
-                            total += CountImagesLabels(fs::path(validRoot));
-
-                        std::atomic<uint64_t> done{ 0 };
-                        PostMessageW(hDlg, WM_APP + 100, 0, 0); // 任意: ログ開始等
-
-                        // 6) コピー本体（images / labels のみ）
-                        if (useTrain && !trainRoot.empty()) {
-                            fs::path s = fs::path(trainRoot);
-                            CopySubtreeWithProgress(s / L"images", dTrainImg, done, total, hDlg);
-                            CopySubtreeWithProgress(s / L"labels", dTrainLbl, done, total, hDlg);
-                        }
-                        if (useValid && !validRoot.empty()) {
-                            fs::path s = fs::path(validRoot);
-                            CopySubtreeWithProgress(s / L"images", dValidImg, done, total, hDlg);
-                            CopySubtreeWithProgress(s / L"labels", dValidLbl, done, total, hDlg);
-                        }
-
-                        // 7) 100% にしてUI復帰
-                        SendDlgItemMessageW(hDlg, IDC_PROGRESS_COPY, PBM_SETPOS, 100, 0);
-
-                        // ログ（任意・メインに出すなら AppendLog を使う）
-                        // AppendLog(L"[COPY] Completed.\r\n");
-
-                        EnableWindow(GetDlgItem(hDlg, IDC_BTN_COPY_TO_TEMP), TRUE);
-                        MessageBeep(MB_OK);
-                        }).detach();
-
-                    return TRUE;
-                }
-                */
-
-                //  コピー実行ボタン
+            //  コピー実行ボタン
                 case IDC_BTN_COPY_TO_TEMP:
                 {
                     // 1) Temp ルート（親のメインダイアログから取得）
@@ -718,6 +628,9 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                         EnableWindow(GetDlgItem(hDlg, IDC_BTN_COPY_TO_TEMP), TRUE);
                         MessageBeep(MB_OK);
                         }).detach();
+
+                    UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
+                    UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
 
                     return TRUE;
                 }

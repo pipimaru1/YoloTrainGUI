@@ -47,12 +47,17 @@
 #define IDC_LOG                         1070
 #define IDC_STC_TEMP                    1073
 #define IDC_BTN_OPEN_COPY_MULTI         1074
+
 #define IDD_COPY_MULTI                  1200
 #define IDC_PROGRESS_COPY               1201
 #define IDC_BTN_COPY_TO_TEMP            1202
 #define IDC_BTN_CLEARTMP_MCOPY          1204
 #define IDC_COMBO_TEMP_MCOPY            1205
 #define IDC_BTN_BROWSE_TEMP_MCOPY       1206
+#define IDC_STATIC_TMP_TRAIN            1207
+#define IDC_STATIC_TMP_VALID            1208
+#define IDC_STATIC_TMP_TRAIN2           1208
+
 #define IDC_CMB_TRAIN_SRC_0             1210
 #define IDC_CMB_TRAIN_SRC_1             1211
 #define IDC_CMB_TRAIN_SRC_2             1212

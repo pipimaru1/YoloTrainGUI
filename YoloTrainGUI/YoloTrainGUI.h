@@ -29,7 +29,7 @@ std::vector<std::wstring> LoadMRU(const std::wstring& section);
 bool LoadFlagFromIni(const wchar_t* key, bool def = false);
 std::string ToUTF8(const std::wstring& w);
 std::wstring FromUTF8(const std::string& s);
-void DoClearTemp(HWND hOwner, bool confirm = true, bool keepRoot = false);
+void DoClearTemp(HWND hOwner,const UINT _ID ,bool confirm = true, bool keepRoot = false);
 
 
 // ------------------------------
