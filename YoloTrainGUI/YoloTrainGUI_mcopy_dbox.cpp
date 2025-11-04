@@ -7,33 +7,46 @@
 #include "Tooltip.hpp"
 
 #define FILECOPY_PROGRESS_STEP 50 // ファイルコピーの進捗更新間隔（ミリ秒）
+#define MAXDIR 16 // 最大ディレクトリ数（Train/Valid 各 8 行）
 // 例: 冒頭付近にID配列を置く
-static const UINT IDC_CMB_TRAIN_SRC[8] = {
+static const UINT IDC_CMB_TRAIN_SRC[MAXDIR] = {
     IDC_CMB_TRAIN_SRC_0, IDC_CMB_TRAIN_SRC_1, IDC_CMB_TRAIN_SRC_2, IDC_CMB_TRAIN_SRC_3,
     IDC_CMB_TRAIN_SRC_4, IDC_CMB_TRAIN_SRC_5, IDC_CMB_TRAIN_SRC_6, IDC_CMB_TRAIN_SRC_7,
+    IDC_CMB_TRAIN_SRC_8, IDC_CMB_TRAIN_SRC_9, IDC_CMB_TRAIN_SRC_10, IDC_CMB_TRAIN_SRC_11,
+    IDC_CMB_TRAIN_SRC_12, IDC_CMB_TRAIN_SRC_13, IDC_CMB_TRAIN_SRC_14, IDC_CMB_TRAIN_SRC_15,
 };
-static const UINT IDC_CMB_VALID_SRC[8] = {
+static const UINT IDC_CMB_VALID_SRC[MAXDIR] = {
     IDC_CMB_VALID_SRC_0, IDC_CMB_VALID_SRC_1, IDC_CMB_VALID_SRC_2, IDC_CMB_VALID_SRC_3,
     IDC_CMB_VALID_SRC_4, IDC_CMB_VALID_SRC_5, IDC_CMB_VALID_SRC_6, IDC_CMB_VALID_SRC_7,
+	IDC_CMB_VALID_SRC_8, IDC_CMB_VALID_SRC_9, IDC_CMB_VALID_SRC_10, IDC_CMB_VALID_SRC_11,
+	IDC_CMB_VALID_SRC_12, IDC_CMB_VALID_SRC_13, IDC_CMB_VALID_SRC_14, IDC_CMB_VALID_SRC_15,
 };
 // ★各行の「Train用」「Valid用」チェックを独立IDに
-static const UINT IDC_CHK_TRAIN_EN[8] = {
+static const UINT IDC_CHK_TRAIN_EN[MAXDIR] = {
     IDC_CHK_TRAIN_EN_0, IDC_CHK_TRAIN_EN_1, IDC_CHK_TRAIN_EN_2, IDC_CHK_TRAIN_EN_3,
     IDC_CHK_TRAIN_EN_4, IDC_CHK_TRAIN_EN_5, IDC_CHK_TRAIN_EN_6, IDC_CHK_TRAIN_EN_7,
+	IDC_CHK_TRAIN_EN_8, IDC_CHK_TRAIN_EN_9, IDC_CHK_TRAIN_EN_10, IDC_CHK_TRAIN_EN_11,
+	IDC_CHK_TRAIN_EN_12, IDC_CHK_TRAIN_EN_13, IDC_CHK_TRAIN_EN_14, IDC_CHK_TRAIN_EN_15,
 };
-static const UINT IDC_CHK_VALID_EN[8] = {
+static const UINT IDC_CHK_VALID_EN[MAXDIR] = {
     IDC_CHK_VALID_EN_0, IDC_CHK_VALID_EN_1, IDC_CHK_VALID_EN_2, IDC_CHK_VALID_EN_3,
     IDC_CHK_VALID_EN_4, IDC_CHK_VALID_EN_5, IDC_CHK_VALID_EN_6, IDC_CHK_VALID_EN_7,
+	IDC_CHK_VALID_EN_8, IDC_CHK_VALID_EN_9, IDC_CHK_VALID_EN_10, IDC_CHK_VALID_EN_11,
+	IDC_CHK_VALID_EN_12, IDC_CHK_VALID_EN_13, IDC_CHK_VALID_EN_14, IDC_CHK_VALID_EN_15,
 };
 
 // スタティック表示先のID配列（既存のコンボ配列とペア）
-static const UINT IDC_STC_TRAIN_SRC[8] = {
+static const UINT IDC_STC_TRAIN_SRC[MAXDIR] = {
     IDC_STATIC_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_3,
     IDC_STATIC_TRAIN_SRC_4, IDC_STATIC_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_7,
+	IDC_STATIC_TRAIN_SRC_8, IDC_STATIC_TRAIN_SRC_9, IDC_STATIC_TRAIN_SRC_10, IDC_STATIC_TRAIN_SRC_11,
+	IDC_STATIC_TRAIN_SRC_12, IDC_STATIC_TRAIN_SRC_13, IDC_STATIC_TRAIN_SRC_14, IDC_STATIC_TRAIN_SRC_15,
 };
-static const UINT IDC_STC_VALID_SRC[8] = {
+static const UINT IDC_STC_VALID_SRC[MAXDIR] = {
     IDC_STATIC_VALID_SRC_0, IDC_STATIC_VALID_SRC_1, IDC_STATIC_VALID_SRC_2, IDC_STATIC_VALID_SRC_3,
     IDC_STATIC_VALID_SRC_4, IDC_STATIC_VALID_SRC_5, IDC_STATIC_VALID_SRC_6, IDC_STATIC_VALID_SRC_7,
+	IDC_STATIC_VALID_SRC_8, IDC_STATIC_VALID_SRC_9, IDC_STATIC_VALID_SRC_10, IDC_STATIC_VALID_SRC_11,
+	IDC_STATIC_VALID_SRC_12, IDC_STATIC_VALID_SRC_13, IDC_STATIC_VALID_SRC_14, IDC_STATIC_VALID_SRC_15,
 };
 
 
@@ -44,7 +57,7 @@ int MultiCopyParams::SaveCurrentSettingsToIni(HWND hDlg)
         SaveMRU(L"Temp Dir", src_dir);
 
         // 2) INI 保存（現在値＋各フラグ）
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < MAXDIR; ++i)
         {
             // 現在の選択（train/valid）
             SaveMRU(L"Train Data " + std::to_wstring(i), src_dir_trains[i]);
@@ -54,34 +67,6 @@ int MultiCopyParams::SaveCurrentSettingsToIni(HWND hDlg)
             SaveMRU(L"Use Train Data " + std::to_wstring(i), src_dir_train_chks[i] ? L"1" : L"0");
             SaveMRU(L"Use Valid Data " + std::to_wstring(i), src_dir_valid_chks[i] ? L"1" : L"0");
         }
-/*
-        SaveMRU(L"Train Data 0", src_dir_trains[0]);
-        SaveMRU(L"Train Data 1", src_dir_trains[1]);
-        SaveMRU(L"Train Data 2", src_dir_trains[2]);
-        SaveMRU(L"Train Data 3", src_dir_trains[3]);
-        SaveMRU(L"Train Data 4", src_dir_trains[4]);
-        SaveMRU(L"Train Data 5", src_dir_trains[5]);
-        SaveMRU(L"Train Data 6", src_dir_trains[6]);
-        SaveMRU(L"Train Data 7", src_dir_trains[7]);
-
-        SaveMRU(L"Valid Data 0", src_dir_valids[0]);
-        SaveMRU(L"Valid Data 1", src_dir_valids[1]);
-        SaveMRU(L"Valid Data 2", src_dir_valids[2]);
-        SaveMRU(L"Valid Data 3", src_dir_valids[3]);
-        SaveMRU(L"Valid Data 4", src_dir_valids[4]);
-        SaveMRU(L"Valid Data 5", src_dir_valids[5]);
-        SaveMRU(L"Valid Data 6", src_dir_valids[6]);
-        SaveMRU(L"Valid Data 7", src_dir_valids[7]);
-
-        SaveMRU(L"Use Data 0", src_dir_train_chks[0] ? L"1" : L"0");
-        SaveMRU(L"Use Data 1", src_dir_train_chks[1] ? L"1" : L"0");
-        SaveMRU(L"Use Data 2", src_dir_train_chks[2] ? L"1" : L"0");
-        SaveMRU(L"Use Data 3", src_dir_train_chks[3] ? L"1" : L"0");
-        SaveMRU(L"Use Data 4", src_dir_train_chks[4] ? L"1" : L"0");
-        SaveMRU(L"Use Data 5", src_dir_train_chks[5] ? L"1" : L"0");
-        SaveMRU(L"Use Data 6", src_dir_train_chks[6] ? L"1" : L"0");
-        SaveMRU(L"Use Data 7", src_dir_train_chks[7] ? L"1" : L"0");
-*/
     }
     return 0;
 }
@@ -96,59 +81,43 @@ int MultiCopyParams::ReadControls(HWND hDlg)
     src_dir = GetText(hDlg, IDC_COMBO_TEMP_MCOPY);
 
     // ★ここを実プロジェクトのIDに置き換え
-    static const UINT CMB_TRAIN[8] = {
-        IDC_CMB_TRAIN_SRC_0, 
-        IDC_CMB_TRAIN_SRC_1, 
-        IDC_CMB_TRAIN_SRC_2, 
-        IDC_CMB_TRAIN_SRC_3, 
-        IDC_CMB_TRAIN_SRC_4, 
-        IDC_CMB_TRAIN_SRC_5, 
-        IDC_CMB_TRAIN_SRC_6, 
-        IDC_CMB_TRAIN_SRC_7
+    static const UINT CMB_TRAIN[MAXDIR] = {
+        IDC_CMB_TRAIN_SRC_0, IDC_CMB_TRAIN_SRC_1, IDC_CMB_TRAIN_SRC_2, IDC_CMB_TRAIN_SRC_3, 
+        IDC_CMB_TRAIN_SRC_4, IDC_CMB_TRAIN_SRC_5, IDC_CMB_TRAIN_SRC_6, IDC_CMB_TRAIN_SRC_7,
+		IDC_CMB_TRAIN_SRC_8, IDC_CMB_TRAIN_SRC_9, IDC_CMB_TRAIN_SRC_10, IDC_CMB_TRAIN_SRC_11,
+		IDC_CMB_TRAIN_SRC_12, IDC_CMB_TRAIN_SRC_13, IDC_CMB_TRAIN_SRC_14, IDC_CMB_TRAIN_SRC_15
     };
-    static const UINT CMB_VALID[8] = {
-        IDC_CMB_VALID_SRC_0,
-        IDC_CMB_VALID_SRC_1,
-        IDC_CMB_VALID_SRC_2,
-        IDC_CMB_VALID_SRC_3,
-        IDC_CMB_VALID_SRC_4,
-        IDC_CMB_VALID_SRC_5,
-        IDC_CMB_VALID_SRC_6,
-        IDC_CMB_VALID_SRC_7
+    static const UINT CMB_VALID[MAXDIR] = {
+        IDC_CMB_VALID_SRC_0,IDC_CMB_VALID_SRC_1,IDC_CMB_VALID_SRC_2,IDC_CMB_VALID_SRC_3,
+        IDC_CMB_VALID_SRC_4,IDC_CMB_VALID_SRC_5,IDC_CMB_VALID_SRC_6,IDC_CMB_VALID_SRC_7,
+		IDC_CMB_VALID_SRC_8,IDC_CMB_VALID_SRC_9,IDC_CMB_VALID_SRC_10,IDC_CMB_VALID_SRC_11,
+		IDC_CMB_VALID_SRC_12,IDC_CMB_VALID_SRC_13,IDC_CMB_VALID_SRC_14,IDC_CMB_VALID_SRC_15
     };
     // 行の有効チェック（1行＝Train/Valid のペアをまとめてON/OFFする想定）
-    static const UINT CHK_USE_TRAIN[8] = {
-        IDC_CHK_TRAIN_EN_0,
-        IDC_CHK_TRAIN_EN_1,
-        IDC_CHK_TRAIN_EN_2,
-        IDC_CHK_TRAIN_EN_3,
-        IDC_CHK_TRAIN_EN_4,
-        IDC_CHK_TRAIN_EN_5,
-        IDC_CHK_TRAIN_EN_6,
-        IDC_CHK_TRAIN_EN_7
+    static const UINT CHK_USE_TRAIN[MAXDIR] = {
+        IDC_CHK_TRAIN_EN_0,IDC_CHK_TRAIN_EN_1,IDC_CHK_TRAIN_EN_2,IDC_CHK_TRAIN_EN_3,
+        IDC_CHK_TRAIN_EN_4,IDC_CHK_TRAIN_EN_5,IDC_CHK_TRAIN_EN_6,IDC_CHK_TRAIN_EN_7,
+		IDC_CHK_TRAIN_EN_8,IDC_CHK_TRAIN_EN_9,IDC_CHK_TRAIN_EN_10,IDC_CHK_TRAIN_EN_11,
+		IDC_CHK_TRAIN_EN_12,IDC_CHK_TRAIN_EN_13,IDC_CHK_TRAIN_EN_14,IDC_CHK_TRAIN_EN_15
     };
 
     // 行の有効チェック（1行＝Train/Valid のペアをまとめてON/OFFする想定）
-    static const UINT CHK_USE_VALID[8] = {
-        IDC_CHK_VALID_EN_0,
-        IDC_CHK_VALID_EN_1,
-        IDC_CHK_VALID_EN_2,
-        IDC_CHK_VALID_EN_3,
-        IDC_CHK_VALID_EN_4,
-        IDC_CHK_VALID_EN_5,
-        IDC_CHK_VALID_EN_6,
-        IDC_CHK_VALID_EN_7
+    static const UINT CHK_USE_VALID[MAXDIR] = {
+        IDC_CHK_VALID_EN_0,IDC_CHK_VALID_EN_1,IDC_CHK_VALID_EN_2,IDC_CHK_VALID_EN_3,
+        IDC_CHK_VALID_EN_4,IDC_CHK_VALID_EN_5,IDC_CHK_VALID_EN_6,IDC_CHK_VALID_EN_7,
+		IDC_CHK_VALID_EN_8,IDC_CHK_VALID_EN_9,IDC_CHK_VALID_EN_10,IDC_CHK_VALID_EN_11,
+		IDC_CHK_VALID_EN_12,IDC_CHK_VALID_EN_13,IDC_CHK_VALID_EN_14,IDC_CHK_VALID_EN_15
     };
 
     // 念のためサイズを保証
-    if (src_dir_trains.size() != 8) src_dir_trains.resize(8);
-    if (src_dir_valids.size() != 8) src_dir_valids.resize(8);
-    if (src_dir_train_chks.size() != 8) src_dir_train_chks.resize(8);
-    if (src_dir_valid_chks.size() != 8) src_dir_valid_chks.resize(8);
+    if (src_dir_trains.size() != MAXDIR) src_dir_trains.resize(MAXDIR);
+    if (src_dir_valids.size() != MAXDIR) src_dir_valids.resize(MAXDIR);
+    if (src_dir_train_chks.size() != MAXDIR) src_dir_train_chks.resize(MAXDIR);
+    if (src_dir_valid_chks.size() != MAXDIR) src_dir_valid_chks.resize(MAXDIR);
 
     int enabledCount = 0;
 
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < MAXDIR; ++i)
     {
         // --- Train 側 ---
         if (CMB_TRAIN[i] != 0) {
@@ -290,6 +259,8 @@ uint64_t CountFilesUnder(const fs::path& root)
     return cnt;
 }
 
+void UpdateAllFolderCounts(HWND hDlg);
+
 void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
 {
     std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
@@ -308,7 +279,9 @@ void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT
         text = L"-";
     }
     SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
+    UpdateAllFolderCounts(hDlg);
 }
+
 
 //テンポラリフォルダ用Train
 void UpdateFolderCounter_Train(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
@@ -351,6 +324,58 @@ void UpdateFolderCounter_Valid(HWND hDlg, const UINT ID_COMBO, const UINT ID_STA
     SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
 }
 
+// IDC_STATIC_TRAIN_SRC_0 ~ IDC_STATIC_TRAIN_SRC_15 のスタティックコントロールに入っている
+// 値を読取って、IDC_STATIC_TOTAL_TR に合計を表示する
+// IDC_CHK_TRAIN_EN_0 ~ IDC_CHK_TRAIN_EN_15 チェックされていないものは無視する
+// ループは使わない
+void UpdateAllFolderCounts(HWND hDlg)
+{
+	//Train 側合計
+    uint64_t total = 0;
+    for (int i = 0; i < MAXDIR; ++i) {
+
+        if(IsDlgButtonChecked(hDlg, IDC_CHK_TRAIN_EN[i]) != BST_CHECKED)
+			continue; // チェックされていない行は無視
+
+        std::wstring text;
+        wchar_t buf[64] = {};
+        GetDlgItemTextW(hDlg, IDC_STC_TRAIN_SRC[i], buf, _countof(buf));
+        text = buf;
+        if (!text.empty()) {
+            try {
+                uint64_t n = std::stoull(text);
+                total += n;
+            }
+            catch (...) {
+                // 変換失敗は無視
+            }
+        }
+    }
+	//Valid 側合計
+	uint64_t total_vl = 0;
+	for (int i = 0; i < MAXDIR; ++i) {
+        if (IsDlgButtonChecked(hDlg, IDC_CHK_VALID_EN[i]) != BST_CHECKED)
+            continue; // チェックされていない行は無視
+        std::wstring text;
+		wchar_t buf[64] = {};
+		GetDlgItemTextW(hDlg, IDC_STC_VALID_SRC[i], buf, _countof(buf));
+		text = buf;
+		if (!text.empty()) {
+			try {
+				uint64_t n = std::stoull(text);
+				total_vl += n;
+			}
+			catch (...) {
+				// 変換失敗は無視
+			}
+		}
+	}
+    SetDlgItemTextW(hDlg, IDC_STATIC_TOTAL_TR, std::to_wstring(total).c_str());
+	SetDlgItemTextW(hDlg, IDC_STATIC_TOTAL_VL, std::to_wstring(total_vl).c_str());
+}
+
+    
+
 ///////////////////////////////////////////////////////////////////////////////////
 // チェックボックスの状態に応じて、コンボボックスを有効化/無効化
 ///////////////////////////////////////////////////////////////////////////////////
@@ -386,7 +411,7 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
             }
 
             // 2) 各行を初期化（MRU投入 → 先頭値を現在値に → CueBanner → チェック復元）
-            for (int i = 0; i < 8; ++i)
+            for (int i = 0; i < MAXDIR; ++i)
             {
                 // --- Train側コンボ ---
                 if (HWND hCmbT = GetDlgItem(hDlg, IDC_CMB_TRAIN_SRC[i])) {
@@ -417,7 +442,7 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 }
             }
 
-            for (int i = 0; i < 8; ++i) {
+            for (int i = 0; i < MAXDIR; ++i) {
                 ApplyEnableFromCheck(hDlg, IDC_CHK_TRAIN_EN_0 + i, IDC_CMB_TRAIN_SRC_0 + i);
                 ApplyEnableFromCheck(hDlg, IDC_CHK_VALID_EN_0 + i, IDC_CMB_VALID_SRC_0 + i);
             }
@@ -440,6 +465,14 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
             UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_5);
             UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_6);
             UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_7, IDC_STATIC_TRAIN_SRC_7);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_8, IDC_STATIC_TRAIN_SRC_8);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_9, IDC_STATIC_TRAIN_SRC_9);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_10, IDC_STATIC_TRAIN_SRC_10);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_11, IDC_STATIC_TRAIN_SRC_11);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_12, IDC_STATIC_TRAIN_SRC_12);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_13, IDC_STATIC_TRAIN_SRC_13);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_14, IDC_STATIC_TRAIN_SRC_14);
+            UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_15, IDC_STATIC_TRAIN_SRC_15);
 
             UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_0, IDC_STATIC_VALID_SRC_0);
 			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_1, IDC_STATIC_VALID_SRC_1);
@@ -449,6 +482,14 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_5, IDC_STATIC_VALID_SRC_5);
 			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_6, IDC_STATIC_VALID_SRC_6);
 			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_7, IDC_STATIC_VALID_SRC_7);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_8, IDC_STATIC_VALID_SRC_8);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_9, IDC_STATIC_VALID_SRC_9);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_10, IDC_STATIC_VALID_SRC_10);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_11, IDC_STATIC_VALID_SRC_11);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_12, IDC_STATIC_VALID_SRC_12);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_13, IDC_STATIC_VALID_SRC_13);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_14, IDC_STATIC_VALID_SRC_14);
+			UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_15, IDC_STATIC_VALID_SRC_15);
 
             UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
             UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
@@ -465,7 +506,7 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
             switch (LOWORD(wParam))
             {
-				//チェックボックスの状態に応じてコンボを有効化/無効化
+				//チェックボックスの状態に応じてコンボを有効化/無効化 EN_15まで
                 case IDC_CHK_TRAIN_EN_0:
                 case IDC_CHK_TRAIN_EN_1:
                 case IDC_CHK_TRAIN_EN_2:
@@ -474,9 +515,18 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 case IDC_CHK_TRAIN_EN_5:
                 case IDC_CHK_TRAIN_EN_6:
                 case IDC_CHK_TRAIN_EN_7:
+                case IDC_CHK_TRAIN_EN_8:
+				case IDC_CHK_TRAIN_EN_9:
+				case IDC_CHK_TRAIN_EN_10:
+				case IDC_CHK_TRAIN_EN_11:
+				case IDC_CHK_TRAIN_EN_12:
+				case IDC_CHK_TRAIN_EN_13:
+				case IDC_CHK_TRAIN_EN_14:
+				case IDC_CHK_TRAIN_EN_15:
                     if (HIWORD(wParam) == BN_CLICKED) {
                         UINT idx = LOWORD(wParam) - IDC_CHK_TRAIN_EN_0;
                         ApplyEnableFromCheck(hDlg, LOWORD(wParam), IDC_CMB_TRAIN_SRC_0 + idx);
+                        UpdateAllFolderCounts(hDlg);
                     }
                     return TRUE;
 
@@ -488,12 +538,21 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 case IDC_CHK_VALID_EN_5:
                 case IDC_CHK_VALID_EN_6:
                 case IDC_CHK_VALID_EN_7:
+				case IDC_CHK_VALID_EN_8:
+				case IDC_CHK_VALID_EN_9:
+				case IDC_CHK_VALID_EN_10:
+				case IDC_CHK_VALID_EN_11:
+				case IDC_CHK_VALID_EN_12:
+				case IDC_CHK_VALID_EN_13:
+				case IDC_CHK_VALID_EN_14:
+				case IDC_CHK_VALID_EN_15:
                     if (HIWORD(wParam) == BN_CLICKED) {
                         UINT idx = LOWORD(wParam) - IDC_CHK_VALID_EN_0;
                         ApplyEnableFromCheck(hDlg, LOWORD(wParam), IDC_CMB_VALID_SRC_0 + idx);
+                        UpdateAllFolderCounts(hDlg);
                     }
                     return TRUE;
-
+                //各0~15まで
                 case IDC_BTN_TRAIN_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_0); break;
                 case IDC_BTN_TRAIN_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_1); break;
                 case IDC_BTN_TRAIN_BROWSE_2: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_2, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_2); break;
@@ -502,6 +561,14 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 case IDC_BTN_TRAIN_BROWSE_5: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_5, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_5); break;
                 case IDC_BTN_TRAIN_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_6); break;
                 case IDC_BTN_TRAIN_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_7, IDC_STATIC_TRAIN_SRC_7); break;
+                case IDC_BTN_TRAIN_BROWSE_8: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_8, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_8, IDC_STATIC_TRAIN_SRC_8); break;
+				case IDC_BTN_TRAIN_BROWSE_9: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_9, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_9, IDC_STATIC_TRAIN_SRC_9); break;
+				case IDC_BTN_TRAIN_BROWSE_10: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_10, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_10, IDC_STATIC_TRAIN_SRC_10); break;
+				case IDC_BTN_TRAIN_BROWSE_11: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_11, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_11, IDC_STATIC_TRAIN_SRC_11); break;
+				case IDC_BTN_TRAIN_BROWSE_12: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_12, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_12, IDC_STATIC_TRAIN_SRC_12); break;
+				case IDC_BTN_TRAIN_BROWSE_13: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_13, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_13, IDC_STATIC_TRAIN_SRC_13); break;
+				case IDC_BTN_TRAIN_BROWSE_14: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_14, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_14, IDC_STATIC_TRAIN_SRC_14); break;
+				case IDC_BTN_TRAIN_BROWSE_15: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_15, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_15, IDC_STATIC_TRAIN_SRC_15); break;
 
                 case IDC_BTN_VALID_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_0, IDC_STATIC_VALID_SRC_0); break;
                 case IDC_BTN_VALID_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_1, IDC_STATIC_VALID_SRC_1); break;
@@ -511,6 +578,14 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 case IDC_BTN_VALID_BROWSE_5: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_5, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_5, IDC_STATIC_VALID_SRC_5); break;
                 case IDC_BTN_VALID_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_6, IDC_STATIC_VALID_SRC_6); break;
                 case IDC_BTN_VALID_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_7, IDC_STATIC_VALID_SRC_7); break;
+				case IDC_BTN_VALID_BROWSE_8: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_8, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_8, IDC_STATIC_VALID_SRC_8); break;
+				case IDC_BTN_VALID_BROWSE_9: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_9, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_9, IDC_STATIC_VALID_SRC_9); break;
+				case IDC_BTN_VALID_BROWSE_10: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_10, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_10, IDC_STATIC_VALID_SRC_10); break;
+				case IDC_BTN_VALID_BROWSE_11: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_11, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_11, IDC_STATIC_VALID_SRC_11); break;
+				case IDC_BTN_VALID_BROWSE_12: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_12, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_12, IDC_STATIC_VALID_SRC_12); break;
+				case IDC_BTN_VALID_BROWSE_13: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_13, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_13, IDC_STATIC_VALID_SRC_13); break;
+				case IDC_BTN_VALID_BROWSE_14: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_14, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_14, IDC_STATIC_VALID_SRC_14); break;
+				case IDC_BTN_VALID_BROWSE_15: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_15, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_15, IDC_STATIC_VALID_SRC_15); break;
 
                 case IDC_BTN_BROWSE_TEMP_MCOPY: {
                     PickFolderEx(hDlg, IDC_COMBO_TEMP_MCOPY, L"Tempolary Source Directory");
@@ -550,7 +625,7 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
                     // 2) 選択行をまとめて収集（0..7）
                     std::vector<std::wstring> trainRoots, validRoots;
-                    for (int i = 0; i < 8; ++i) {
+                    for (int i = 0; i < MAXDIR; ++i) {
                         const bool useT = (IsDlgButtonChecked(hDlg, IDC_CHK_TRAIN_EN[i]) == BST_CHECKED);
                         const bool useV = (IsDlgButtonChecked(hDlg, IDC_CHK_VALID_EN[i]) == BST_CHECKED);
                         if (useT) {
