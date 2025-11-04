@@ -619,9 +619,15 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 {
                     // 1) Temp ルート（親のメインダイアログから取得）
                     HWND hMain = GetParent(hDlg);
-                    if (!hMain) { MessageBoxW(hDlg, L"No parent dialog.", L"Error", MB_ICONERROR); break; }
-                    std::wstring tempRoot = GetComboText(GetDlgItem(hMain, IDC_COMBO_TEMP));
-                    if (tempRoot.empty()) { MessageBoxW(hDlg, L"Temp folder is empty.", L"Error", MB_ICONERROR); break; }
+                    if (!hMain) { 
+                        MessageBoxW(hDlg, L"No parent dialog.", L"Error", MB_ICONERROR); 
+                        break; 
+                    }
+                    std::wstring tempRoot = GetComboText(GetDlgItem(hDlg, IDC_COMBO_TEMP_MCOPY));
+                    if (tempRoot.empty()) { 
+                        MessageBoxW(hDlg, L"Temp folder is empty.", L"Error", MB_ICONERROR); 
+                        break; 
+                    }
 
                     // 2) 選択行をまとめて収集（0..7）
                     std::vector<std::wstring> trainRoots, validRoots;
