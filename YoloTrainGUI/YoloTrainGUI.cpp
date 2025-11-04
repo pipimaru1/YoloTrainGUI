@@ -454,7 +454,12 @@ static bool EnsureDir(const fs::path& p)
     return fs::create_directories(p, ec);
 }
 
+///////////////////////////////////////////////////////////////////////////
+//
+// コピーする関数本体
 // Copy dir -> dir with progress
+// 
+///////////////////////////////////////////////////////////////////////////
 static bool CopyTreeWithProgress(const fs::path& src, const fs::path& dst)
 {
     if (!fs::exists(src)) { 
@@ -488,6 +493,97 @@ static bool CopyTreeWithProgress(const fs::path& src, const fs::path& dst)
     }
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////
+//
+// OMP版
+// コピーする関数本体 
+// Copy dir -> dir with progress
+// 
+///////////////////////////////////////////////////////////////////////////
+
+// 追加: ヘッダ
+//#include <omp.h>
+
+//// UIスレッドに進捗(%)を投げるユーザーメッセージ
+//#ifndef WM_APP_PROGRESS
+//#define WM_APP_PROGRESS (WM_APP + 100)
+//#endif
+
+// 進捗通知（並列スレッドから呼ぶ）
+static inline void NotifyProgressPercent(int v) {
+    if (g_hDlg) PostMessageW(g_hDlg, WM_APP_PROGRESS, (WPARAM)v, 0);
+}
+
+// 並列版コピー
+static bool CopyTreeWithProgress_omp(const fs::path& src, const fs::path& dst)
+{
+    if (!fs::exists(src)) {
+        AppendLog(L"[COPY] Source not found: " + src.wstring()); AppendLog(RET);
+        return false;
+    }
+    if (!EnsureDir(dst)) {
+        AppendLog(L"[COPY] Cannot create: " + dst.wstring()); AppendLog(RET);
+        return false;
+    }
+
+    // 1) まず全ディレクトリを逐次で作る（idempotent）
+    {
+        for (auto it = fs::recursive_directory_iterator(src,
+            fs::directory_options::skip_permission_denied);
+            it != fs::recursive_directory_iterator(); ++it)
+        {
+            if (it->is_directory()) {
+                const auto rel = fs::relative(it->path(), src);
+                EnsureDir(dst / rel);
+            }
+        }
+    }
+
+    // 2) ファイル一覧を収集
+    std::vector<std::pair<fs::path, fs::path>> files;
+    files.reserve(4096);
+    for (auto it = fs::recursive_directory_iterator(src,
+        fs::directory_options::skip_permission_denied);
+        it != fs::recursive_directory_iterator(); ++it)
+    {
+        if (it->is_regular_file()) {
+            const auto rel = fs::relative(it->path(), src);
+            files.emplace_back(it->path(), dst / rel);
+        }
+    }
+
+    const uint64_t total = static_cast<uint64_t>(files.size());
+    if (total == 0) { NotifyProgressPercent(100); return true; }
+
+    // 3) 並列コピー
+    std::atomic<uint64_t> done{ 0 };
+
+    // スレッド数は環境やディスクに応じて適宜（例: 4〜8）
+    const int max_threads = (std::min)(8, (std::max)(2, omp_get_max_threads()));
+#pragma omp parallel for schedule(dynamic,1) num_threads(max_threads)
+    for (int i = 0; i < (int)files.size(); ++i) {
+        const auto& srcPath = files[i].first;
+        const auto& dstPath = files[i].second;
+
+        // 念のため親ディレクトリを確保（前段で作っているので多くはno-op）
+        EnsureDir(dstPath.parent_path());
+
+        std::error_code ec;
+        fs::copy_file(srcPath, dstPath, fs::copy_options::overwrite_existing, ec);
+
+        // 進捗（UIへは疎に通知）
+        uint64_t cur = ++done;
+        if ((cur & 0x3F) == 0 || cur == total) { // 64件ごとに通知
+            int pct = (int)((cur * 100) / total);
+            NotifyProgressPercent(pct);
+        }
+    }
+
+    NotifyProgressPercent(100);
+    return true;
+}
+/////////////////////////////////////////////////////////////////////////////////
 
 // ------------------------------
 // Split Dataset (based on your divfiles.cpp)  filecite：使用している分割ロジックは添付コードに準拠
@@ -1130,12 +1226,28 @@ static void DoCopyToTemp()
     ResetProgress();
     AppendLog(L"[COPY] images -> " + dstImages.wstring());
     AppendLog(RET);
-    if (!CopyTreeWithProgress(img, dstImages))
-        return;
+
+    if(0){
+        if (!CopyTreeWithProgress(img, dstImages))
+            return;
+    }
+    else {//並列版
+        if (!CopyTreeWithProgress_omp(img, dstImages));
+            return;
+    }
+    
+
     AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
     AppendLog(RET);
-    if (!CopyTreeWithProgress(lab, dstLabels))
-        return;
+    if(0)
+    {
+        if (!CopyTreeWithProgress(lab, dstLabels))
+            return;
+    }
+    else {
+        if (!CopyTreeWithProgress_omp(lab, dstLabels))
+            return;
+    }
     SetProgress(100);
     AppendLog(L"[COPY] Completed.");
     AppendLog(RET);
@@ -1818,39 +1930,6 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 {
                     if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ノイズ排除
                     DoClearTemp(hDlg, IDC_COMBO_TEMP, /*confirm*/true, /*keepRoot*/false); // 従来通り「ルートごと削除」
-                    //return TRUE;
-
-                    //if (HIWORD(wParam) != BN_CLICKED) return TRUE; // ← これを追加
-                    //std::wstring tempDir = GetText(hDlg, IDC_COMBO_TEMP);
-                    //if (tempDir.empty()) {
-                    //    AppendLog(L"[TEMP] Temp directory is not set.");
-                    //    AppendLog(RET);
-                    //    return TRUE;
-                    //}
-                    //fs::path tempPath(tempDir);
-                    //if (!fs::exists(tempPath)) {
-                    //    AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring());
-                    //    AppendLog(RET);
-                    //    return TRUE;
-                    //}
-                    ////一応本当に消すか確認する
-                    //int _ret = MessageBoxW(hDlg, L"Temp directory will be cleared. Continue?", L"Confirm", MB_OKCANCEL | MB_ICONWARNING);
-                    //if (_ret == IDOK) {
-                    //    try {
-                    //        fs::remove_all(tempPath);
-                    //        AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
-                    //    }
-                    //    catch (const fs::filesystem_error& e) {
-                    //        std::wstring _tmp = FromUTF8(e.what());
-                    //        AppendLog(L"[TEMP] Error clearing temp directory: " + _tmp);
-                    //    }
-                    //}
-                    //else {
-                    //    AppendLog(L"[TEMP] Clear operation cancelled.");
-                    //    AppendLog(RET);
-                    //    return TRUE;
-                    //}
-                    //AppendLog(RET);
                 } break; //IDC_BTN_CLEARTMP
 
                 case IDC_BTN_BROWSE_PYTHON: {
@@ -2043,6 +2122,12 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 return TRUE;
             }
 		}// WM_COMMAND
+
+        case WM_APP_PROGRESS:  // ← WM_COMMAND の外でトップレベル
+        {
+            SetProgress((int)wParam); // 0～100
+            return TRUE;              // 処理済み
+        }
 
         case WM_APP_LOGAPPEND:
         {

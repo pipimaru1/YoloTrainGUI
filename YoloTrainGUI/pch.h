@@ -32,15 +32,14 @@
 #include <map>
 #include <KnownFolders.h>  // FOLDERID_LocalAppData
 #include <shellapi.h>
-
 #include <richedit.h>
 #include <richole.h>
-
 #include <commdlg.h>   // GetOpenFileName
-
 #include <wrl/client.h>
-
 #include <regex>
+
+// 追加: ヘッダ
+#include <omp.h>
 
 namespace fs = std::filesystem;
 

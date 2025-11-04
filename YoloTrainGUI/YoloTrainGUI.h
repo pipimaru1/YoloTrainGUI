@@ -14,7 +14,6 @@ extern std::wstring g_logBuffer;
 extern const wchar_t* RET;
 extern bool _IDC_CHK_LOG_CRLF2LF;// = false;
 
-
 //
 void LogAppendANSI(const std::wstring& s);
 void AppendLog(const std::wstring& s);
@@ -39,7 +38,12 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
 
 // 例: YoloTrainGUI.h など共通で見える場所
-#define WM_APP_LOGAPPEND   (WM_APP + 100)
+#define WM_APP_LOGAPPEND    (WM_APP + 100)
+// UIスレッドに進捗(%)を投げるユーザーメッセージ
+#ifndef WM_APP_PROGRESS
+#define WM_APP_PROGRESS     (WM_APP + 101)
+#endif
+
 #define MAXLINES_RICHEDIT 10000
 //////////////////////////////////////////////////////////////////////////////////////
 // Get text from a control
