@@ -72,9 +72,11 @@ class TrainParams {
     std::wstring device;
     std::wstring _NAME;
     std::wstring project;
-
     std::wstring http_proxy; // HTTP プロキシ設定（v8/v11用）
     std::wstring https_proxy; // HTTPS プロキシ設定（v8/v11用）
+
+    // 追加
+    std::wstring option_str;   // 自由記述の追加オプション (yolov5のtrain.py または yolo CLI へそのまま連結)
 
     int chkResume = 0; // 0 or 1
     int chkCache = 0; // 0 or 1

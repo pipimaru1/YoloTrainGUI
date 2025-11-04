@@ -41,12 +41,15 @@
 #define IDC_CHK_CACHE                   1044
 #define IDC_COMBO_NAME                  1045
 #define IDC_EDIT_PROJECT                1046
+#define IDC_COMBO_NAME2                 1047
 #define IDC_BTN_TRAIN                   1050
 #define IDC_BTN_STOP                    1051
 #define IDC_PROGRESS                    1060
 #define IDC_LOG                         1070
 #define IDC_STC_TEMP                    1073
 #define IDC_BTN_OPEN_COPY_MULTI         1074
+#define IDC_COMBO_OPTION_STR            1075
+#define IDC_CHK_OPTION_STR              1076
 
 #define IDD_COPY_MULTI                  1200
 #define IDC_PROGRESS_COPY               1201
@@ -58,7 +61,6 @@
 #define IDC_STATIC_TMP_VALID            1208
 #define IDC_STATIC_TOTAL_TR             1209
 #define IDC_STATIC_TOTAL_VL             1210
-
 #define IDC_CMB_TRAIN_SRC_0             1220
 #define IDC_CMB_TRAIN_SRC_1             1221
 #define IDC_CMB_TRAIN_SRC_2             1222
@@ -187,6 +189,8 @@
 #define IDC_STATIC_VALID_SRC_13         1373
 #define IDC_STATIC_VALID_SRC_14         1374
 #define IDC_STATIC_VALID_SRC_15         1375
+
+//#define IDC_CHECK_RESUME2               1820
 
 // Next default values for new objects
 // 

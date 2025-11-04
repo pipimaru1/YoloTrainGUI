@@ -432,6 +432,12 @@ static void Updated_UI(HWND hDlg)
     };
 	EnableControls(hDlg, ids_resume, _countof(ids_resume), isResume);
 
+    const BOOL isOptionStr = (IsDlgButtonChecked(hDlg, IDC_CHK_OPTION_STR) == BST_CHECKED);
+    const int ids_optionstr[] = {
+        IDC_COMBO_OPTION_STR
+	};
+	EnableControls(hDlg, ids_optionstr, _countof(ids_optionstr), isOptionStr);
+
 }
 
 // ------------------------------
@@ -884,6 +890,8 @@ int TrainParams::ReadControls(HWND hDlg)
     _NAME   = GetText(hDlg, IDC_COMBO_NAME);
     project = GetText(hDlg, IDC_EDIT_PROJECT);
 
+    option_str = GetText(hDlg, IDC_COMBO_OPTION_STR);  // ← 追加
+
 	// HTTP/HTTPS プロキシ設定（v8/v11用）
 	http_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTP);
 	https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
@@ -905,8 +913,9 @@ int TrainParams::ReadControls(HWND hDlg)
     else if (IsDlgButtonChecked(hDlg, IDC_RADIO_CLASSIFY) == BST_CHECKED) {
         task = L"classify";
     }
-    return 0;
 
+    return 0;
+        
     //MultiCopyDlg用
 }
 
@@ -1151,6 +1160,8 @@ void TrainParams::DoTrain()
 
         if (!_NAME.empty())  ss << L" --name " << Quote(_NAME);
         if (!project.empty()) ss << L" --project " << Quote(project);
+
+        if (!option_str.empty()) ss << L" " << option_str;  // ← 追加（生の文字列をそのまま足す）
     }
     else
     {
@@ -1186,6 +1197,7 @@ void TrainParams::DoTrain()
         if (!project.empty())   ss << L" project=" << Quote(project);
 
         // hyp/cfg は v8/11 では通常不要。必要なら overrides 用に cfg= を追加する等で拡張可。
+        if (!option_str.empty()) ss << L" " << option_str;  // ← 追加（生の文字列をそのまま足す）
     }
 
     const std::wstring command = ss.str();
@@ -1323,6 +1335,11 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
 
         //SaveMRU(L"name", GetText(hDlg, IDC_COMBO_NAME));
         SaveMRU(L"project", GetText(hDlg, IDC_EDIT_PROJECT));
+
+		//オプション文字列の保存
+        SaveMRU(L"option_str", GetText(hDlg, IDC_COMBO_OPTION_STR));  // ← 追加
+        chkResume = (IsDlgButtonChecked(hDlg, IDC_CHK_OPTION_STR) == BST_CHECKED);
+        SaveMRU(L"option_str_chk", chkResume ? L"1" : L"0");
 
         // チェックボックスは "1" / "0" を保存
         chkCache = (IsDlgButtonChecked(hDlg, IDC_CHK_CACHE) == BST_CHECKED);
@@ -1566,7 +1583,11 @@ static void InitDialog(HWND hDlg)
 	CheckDlgButton(hDlg, IDC_CHK_USEPROXY,      LoadFlagFromIni(L"chkUseProxy", false) ? BST_CHECKED : BST_UNCHECKED);
 
 	LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_PROJECT), L"project");
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_EDIT_PROJECT));           
 
+    LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_OPTION_STR), L"option_str"); // ← 追加
+    ShowFirstComboItem(GetDlgItem(hDlg, IDC_COMBO_OPTION_STR));            // ← 追加
+    CheckDlgButton(hDlg, IDC_CHK_OPTION_STR, LoadFlagFromIni(L"option_str_chk", false) ? BST_CHECKED : BST_UNCHECKED);
 
 	//UpdateBackendUI(hDlg); // バックエンドのUI更新
  //   UpdateProxyUI(hDlg);   // プロキシのUI更新
@@ -1980,23 +2001,41 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 case IDC_RAD_YOLOV5:
                 case IDC_RAD_YOLOV8:
                 case IDC_RAD_YOLO11:
-                {
-                    if (HIWORD(wParam) == BN_CLICKED) {
-                        Updated_UI(hDlg);
-                        return TRUE;
-                    }
-                }break;
-
+                //{
+                //    if (HIWORD(wParam) == BN_CLICKED) {
+                //        Updated_UI(hDlg);
+                //        return TRUE;
+                //    }
+                //}break;
                 case IDC_CHK_USEPROXY:
-                {
-                    if (HIWORD(wParam) == BN_CLICKED)
-                    {
-                        Updated_UI(hDlg);
-                        return TRUE;
-                    }
-                }break;
+                //{
+                //    if (HIWORD(wParam) == BN_CLICKED)
+                //    {
+                //        Updated_UI(hDlg);
+                //        return TRUE;
+                //    }
+                //}break;
 
                 case IDC_CHK_USEHYPERPARAM:
+                //{
+                //    if (HIWORD(wParam) == BN_CLICKED)
+                //    {
+                //        Updated_UI(hDlg);
+                //        return TRUE;
+                //    }
+                //}break;
+
+                case IDC_CHECK_RESUME:
+                //{
+                //    if (HIWORD(wParam) == BN_CLICKED)
+                //    {
+                //        Updated_UI(hDlg);
+                //        return TRUE;
+                //    }
+                //}break;
+
+
+                case IDC_CHK_OPTION_STR:
                 {
                     if (HIWORD(wParam) == BN_CLICKED)
                     {
@@ -2004,6 +2043,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                         return TRUE;
                     }
                 }break;
+
                 case IDC_CHK_LOG_CRLF2LF:
                 {
                     if (HIWORD(wParam) == BN_CLICKED)
