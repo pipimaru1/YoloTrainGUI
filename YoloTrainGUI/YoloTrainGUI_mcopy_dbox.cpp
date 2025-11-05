@@ -7,28 +7,27 @@
 #include "Tooltip.hpp"
 
 #define FILECOPY_PROGRESS_STEP 50 // ファイルコピーの進捗更新間隔（ミリ秒）
-#define MAXDIR 16 // 最大ディレクトリ数（Train/Valid 各 8 行）
 // 例: 冒頭付近にID配列を置く
-static const UINT IDC_CMB_TRAIN_SRC[MAXDIR] = {
+const UINT IDC_CMB_TRAIN_SRC[MAXDIR] = {
     IDC_CMB_TRAIN_SRC_0, IDC_CMB_TRAIN_SRC_1, IDC_CMB_TRAIN_SRC_2, IDC_CMB_TRAIN_SRC_3,
     IDC_CMB_TRAIN_SRC_4, IDC_CMB_TRAIN_SRC_5, IDC_CMB_TRAIN_SRC_6, IDC_CMB_TRAIN_SRC_7,
     IDC_CMB_TRAIN_SRC_8, IDC_CMB_TRAIN_SRC_9, IDC_CMB_TRAIN_SRC_10, IDC_CMB_TRAIN_SRC_11,
     IDC_CMB_TRAIN_SRC_12, IDC_CMB_TRAIN_SRC_13, IDC_CMB_TRAIN_SRC_14, IDC_CMB_TRAIN_SRC_15,
 };
-static const UINT IDC_CMB_VALID_SRC[MAXDIR] = {
+const UINT IDC_CMB_VALID_SRC[MAXDIR] = {
     IDC_CMB_VALID_SRC_0, IDC_CMB_VALID_SRC_1, IDC_CMB_VALID_SRC_2, IDC_CMB_VALID_SRC_3,
     IDC_CMB_VALID_SRC_4, IDC_CMB_VALID_SRC_5, IDC_CMB_VALID_SRC_6, IDC_CMB_VALID_SRC_7,
 	IDC_CMB_VALID_SRC_8, IDC_CMB_VALID_SRC_9, IDC_CMB_VALID_SRC_10, IDC_CMB_VALID_SRC_11,
 	IDC_CMB_VALID_SRC_12, IDC_CMB_VALID_SRC_13, IDC_CMB_VALID_SRC_14, IDC_CMB_VALID_SRC_15,
 };
 // ★各行の「Train用」「Valid用」チェックを独立IDに
-static const UINT IDC_CHK_TRAIN_EN[MAXDIR] = {
+const UINT IDC_CHK_TRAIN_EN[MAXDIR] = {
     IDC_CHK_TRAIN_EN_0, IDC_CHK_TRAIN_EN_1, IDC_CHK_TRAIN_EN_2, IDC_CHK_TRAIN_EN_3,
     IDC_CHK_TRAIN_EN_4, IDC_CHK_TRAIN_EN_5, IDC_CHK_TRAIN_EN_6, IDC_CHK_TRAIN_EN_7,
 	IDC_CHK_TRAIN_EN_8, IDC_CHK_TRAIN_EN_9, IDC_CHK_TRAIN_EN_10, IDC_CHK_TRAIN_EN_11,
 	IDC_CHK_TRAIN_EN_12, IDC_CHK_TRAIN_EN_13, IDC_CHK_TRAIN_EN_14, IDC_CHK_TRAIN_EN_15,
 };
-static const UINT IDC_CHK_VALID_EN[MAXDIR] = {
+const UINT IDC_CHK_VALID_EN[MAXDIR] = {
     IDC_CHK_VALID_EN_0, IDC_CHK_VALID_EN_1, IDC_CHK_VALID_EN_2, IDC_CHK_VALID_EN_3,
     IDC_CHK_VALID_EN_4, IDC_CHK_VALID_EN_5, IDC_CHK_VALID_EN_6, IDC_CHK_VALID_EN_7,
 	IDC_CHK_VALID_EN_8, IDC_CHK_VALID_EN_9, IDC_CHK_VALID_EN_10, IDC_CHK_VALID_EN_11,
@@ -36,19 +35,18 @@ static const UINT IDC_CHK_VALID_EN[MAXDIR] = {
 };
 
 // スタティック表示先のID配列（既存のコンボ配列とペア）
-static const UINT IDC_STC_TRAIN_SRC[MAXDIR] = {
+const UINT IDC_STC_TRAIN_SRC[MAXDIR] = {
     IDC_STATIC_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_3,
     IDC_STATIC_TRAIN_SRC_4, IDC_STATIC_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_7,
 	IDC_STATIC_TRAIN_SRC_8, IDC_STATIC_TRAIN_SRC_9, IDC_STATIC_TRAIN_SRC_10, IDC_STATIC_TRAIN_SRC_11,
 	IDC_STATIC_TRAIN_SRC_12, IDC_STATIC_TRAIN_SRC_13, IDC_STATIC_TRAIN_SRC_14, IDC_STATIC_TRAIN_SRC_15,
 };
-static const UINT IDC_STC_VALID_SRC[MAXDIR] = {
+const UINT IDC_STC_VALID_SRC[MAXDIR] = {
     IDC_STATIC_VALID_SRC_0, IDC_STATIC_VALID_SRC_1, IDC_STATIC_VALID_SRC_2, IDC_STATIC_VALID_SRC_3,
     IDC_STATIC_VALID_SRC_4, IDC_STATIC_VALID_SRC_5, IDC_STATIC_VALID_SRC_6, IDC_STATIC_VALID_SRC_7,
 	IDC_STATIC_VALID_SRC_8, IDC_STATIC_VALID_SRC_9, IDC_STATIC_VALID_SRC_10, IDC_STATIC_VALID_SRC_11,
 	IDC_STATIC_VALID_SRC_12, IDC_STATIC_VALID_SRC_13, IDC_STATIC_VALID_SRC_14, IDC_STATIC_VALID_SRC_15,
 };
-
 
 int MultiCopyParams::SaveCurrentSettingsToIni(HWND hDlg)
 {
@@ -241,151 +239,6 @@ static uint64_t CountImagesLabels(const fs::path& root) {
     countDir(root / L"images");
     countDir(root / L"labels");
     return total;
-}
-/////////////////////////////////////////////////////////////////////////////////
-// ディレクトリ以下の“ファイル数だけ”を数える（存在しなければ0）
-//////////////////////////////////////////////////////////////////////////////////
-//static 
-uint64_t CountFilesUnder(const fs::path& root)
-{
-    std::error_code ec;
-    if (!fs::exists(root, ec)) return 0;
-    uint64_t cnt = 0;
-    for (auto it = fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied, ec);
-        it != fs::recursive_directory_iterator(); ++it)
-    {
-        if (it->is_regular_file(ec)) ++cnt;
-    }
-    return cnt;
-}
-
-void UpdateAllFolderCounts(HWND hDlg);
-
-void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
-{
-    std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
-    std::wstring text;
-    if (!root.empty())
-    {
-        fs::path p(root);
-        uint64_t nImg = CountFilesUnder(p / L"images");
-        uint64_t nLbl = CountFilesUnder(p / L"labels");
-        uint64_t nTot = nImg + nLbl;
-
-        //text = std::to_wstring(nTot);
-		text = std::to_wstring(nImg); // 画像数のみ表示
-    }
-    else {
-        text = L"-";
-    }
-    SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
-    UpdateAllFolderCounts(hDlg);
-}
-
-
-//テンポラリフォルダ用Train
-void UpdateFolderCounter_Train(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
-{
-    std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
-    std::wstring text;
-    if (!root.empty())
-    {
-        fs::path p(root);
-        uint64_t nImg = CountFilesUnder(p / L"dataset" / L"train" / L"images");
-        uint64_t nLbl = CountFilesUnder(p / L"dataset" / L"train" / L"labels");
-        uint64_t nTot = nImg + nLbl;
-
-        //text = std::to_wstring(nTot);
-        text = std::to_wstring(nImg); // 画像数のみ表示
-    }
-    else {
-        text = L"-";
-    }
-    SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
-}
-//テンポラリフォルダ用Valid
-void UpdateFolderCounter_Valid(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT)
-{
-    std::wstring root = GetComboText(GetDlgItem(hDlg, ID_COMBO));
-    std::wstring text;
-    if (!root.empty())
-    {
-        fs::path p(root);
-        uint64_t nImg = CountFilesUnder(p / L"dataset" / L"valid" / L"images");
-        uint64_t nLbl = CountFilesUnder(p / L"dataset" / L"valid" / L"labels");
-        uint64_t nTot = nImg + nLbl;
-
-        //text = std::to_wstring(nTot);
-        text = std::to_wstring(nImg); // 画像数のみ表示
-    }
-    else {
-        text = L"-";
-    }
-    SetDlgItemTextW(hDlg, ID_STATICTXT, text.c_str());
-}
-
-// IDC_STATIC_TRAIN_SRC_0 ~ IDC_STATIC_TRAIN_SRC_15 のスタティックコントロールに入っている
-// 値を読取って、IDC_STATIC_TOTAL_TR に合計を表示する
-// IDC_CHK_TRAIN_EN_0 ~ IDC_CHK_TRAIN_EN_15 チェックされていないものは無視する
-// ループは使わない
-void UpdateAllFolderCounts(HWND hDlg)
-{
-	//Train 側合計
-    uint64_t total = 0;
-    for (int i = 0; i < MAXDIR; ++i) {
-
-        if(IsDlgButtonChecked(hDlg, IDC_CHK_TRAIN_EN[i]) != BST_CHECKED)
-			continue; // チェックされていない行は無視
-
-        std::wstring text;
-        wchar_t buf[64] = {};
-        GetDlgItemTextW(hDlg, IDC_STC_TRAIN_SRC[i], buf, _countof(buf));
-        text = buf;
-        if (!text.empty()) {
-            try {
-                uint64_t n = std::stoull(text);
-                total += n;
-            }
-            catch (...) {
-                // 変換失敗は無視
-            }
-        }
-    }
-	//Valid 側合計
-	uint64_t total_vl = 0;
-	for (int i = 0; i < MAXDIR; ++i) {
-        if (IsDlgButtonChecked(hDlg, IDC_CHK_VALID_EN[i]) != BST_CHECKED)
-            continue; // チェックされていない行は無視
-        std::wstring text;
-		wchar_t buf[64] = {};
-		GetDlgItemTextW(hDlg, IDC_STC_VALID_SRC[i], buf, _countof(buf));
-		text = buf;
-		if (!text.empty()) {
-			try {
-				uint64_t n = std::stoull(text);
-				total_vl += n;
-			}
-			catch (...) {
-				// 変換失敗は無視
-			}
-		}
-	}
-    SetDlgItemTextW(hDlg, IDC_STATIC_TOTAL_TR, std::to_wstring(total).c_str());
-	SetDlgItemTextW(hDlg, IDC_STATIC_TOTAL_VL, std::to_wstring(total_vl).c_str());
-}
-
-    
-
-///////////////////////////////////////////////////////////////////////////////////
-// チェックボックスの状態に応じて、コンボボックスを有効化/無効化
-///////////////////////////////////////////////////////////////////////////////////
-void ApplyEnableFromCheck(HWND hDlg, UINT idChk, UINT idCombo)
-{
-    if (!hDlg) return;
-    const BOOL enabled = (IsDlgButtonChecked(hDlg, idChk) == BST_CHECKED);
-    if (HWND hCombo = GetDlgItem(hDlg, idCombo)) {
-        EnableWindow(hCombo, enabled);
-    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -757,6 +610,28 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     return TRUE;
                 }
 
+                case IDC_BTN_EXPORTLIST_MCOPY:
+                {
+                    if (HIWORD(wParam) != BN_CLICKED) return TRUE;
+                    if (ExportMultiCopyListToCSV(hDlg)) {
+                        LogToMain(L"[CSV] Exported list.\r\n");
+                    }
+                    else {
+                        LogToMain(L"[CSV] Export cancelled.\r\n");
+                    }
+                    return TRUE;
+                }
+                case IDC_BTN_IMPORTLIST_MCOPY:
+                {
+                    if (HIWORD(wParam) != BN_CLICKED) return TRUE;
+                    if (ImportMultiCopyListFromCSV(hDlg)) {
+                        LogToMain(L"[CSV] Imported list.\r\n");
+                    }
+                    else {
+                        LogToMain(L"[CSV] Import cancelled.\r\n");
+                    }
+                    return TRUE;
+                }
                 case IDCANCEL2: // OKボタン 同じ処理 
                 case IDCANCEL: // キャンセルボタン／×ボタン
                     EndDialog(hDlg, IDCANCEL);

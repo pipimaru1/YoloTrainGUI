@@ -61,6 +61,9 @@
 #define IDC_STATIC_TMP_VALID            1208
 #define IDC_STATIC_TOTAL_TR             1209
 #define IDC_STATIC_TOTAL_VL             1210
+#define IDC_BTN_EXPORTLIST_MCOPY        1211
+#define IDC_BTN_IMPORTLIST_MCOPY        1212
+
 #define IDC_CMB_TRAIN_SRC_0             1220
 #define IDC_CMB_TRAIN_SRC_1             1221
 #define IDC_CMB_TRAIN_SRC_2             1222
@@ -190,15 +193,13 @@
 #define IDC_STATIC_VALID_SRC_14         1374
 #define IDC_STATIC_VALID_SRC_15         1375
 
-//#define IDC_CHECK_RESUME2               1820
-
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1076
+#define _APS_NEXT_CONTROL_VALUE         1077
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

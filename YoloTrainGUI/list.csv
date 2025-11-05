@@ -1,0 +1,32 @@
+﻿Train00, 0, T:\020DATA\yolo_datasets\20251103_AWZ\02_compo_m_road_245
+Train01, 0, T:\020DATA\yolo_datasets\20251103_AWZ\03_assy_south_yard_300
+Train02, 0, T:\020DATA\yolo_datasets\20251103_AWZ\04_shonan_6263
+Train03, 0, T:\020DATA\yolo_datasets\20251103_AWZ\05_shonan_991
+Train04, 0, T:\020DATA\yolo_datasets\20251103_AWZ\06_shonan_6374
+Train05, 0, T:\020DATA\yolo_datasets\20251103_AWZ\07_shonan_3830
+Train06, 1, T:\020DATA\yolo_datasets\20251103_AWZ\08_shonan_589
+Train07, 0, T:\020DATA\yolo_datasets\20251103_AWZ\09_shonan_3446
+Train08, 0, T:\020DATA\yolo_datasets\20251103_AWZ\10_shonan_7488
+Train09, 0, T:\020DATA\yolo_datasets\20251103_AWZ\11_assy_3396
+Train10, 0, T:\020DATA\yolo_datasets\20251103_AWZ\12_assy_858
+Train11, 0, T:\020DATA\yolo_datasets\20251103_AWZ\13_awzroad_71
+Train12, 0, T:\020DATA\yolo_datasets\20251103_AWZ\14_osaka_390
+Train13, 0, T:\020DATA\yolo_datasets\20251103_AWZ\15_osaka_106A
+Train14, 0, 
+Train15, 0, 
+Valid00, 1, T:\020DATA\yolo_datasets\20251103_AWZ\02_compo_m_road_161
+Valid01, 0, T:\020DATA\yolo_datasets\20251103_AWZ\03_assy_south_yard_127
+Valid02, 0, T:\020DATA\yolo_datasets\20251103_AWZ\04_shonan_6263
+Valid03, 0, T:\020DATA\yolo_datasets\20251103_AWZ\05_shonan_991
+Valid04, 0, T:\020DATA\yolo_datasets\20251103_AWZ\06_shonan_6374
+Valid05, 0, T:\020DATA\yolo_datasets\20251103_AWZ\07_shonan_3830
+Valid06, 0, T:\020DATA\yolo_datasets\20251103_AWZ\08_shonan_589
+Valid07, 0, T:\020DATA\yolo_datasets\20251103_AWZ\09_shonan_3446
+Valid08, 0, T:\020DATA\yolo_datasets\20251103_AWZ\10_shonan_7488
+Valid09, 0, T:\020DATA\yolo_datasets\20251103_AWZ\11_assy_3396
+Valid10, 0, T:\020DATA\yolo_datasets\20251103_AWZ\12_assy_858
+Valid11, 1, T:\020DATA\yolo_datasets\20251103_AWZ\13_awzroad_71
+Valid12, 0, T:\020DATA\yolo_datasets\20251103_AWZ\14_osaka_390
+Valid13, 1, T:\020DATA\yolo_datasets\20251103_AWZ\15_osaka_106
+Valid14, 0, 
+Valid15, 0, 

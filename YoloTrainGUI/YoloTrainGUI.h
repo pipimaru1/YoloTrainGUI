@@ -14,6 +14,16 @@ extern std::wstring g_logBuffer;
 extern const wchar_t* RET;
 extern bool _IDC_CHK_LOG_CRLF2LF;// = false;
 
+#define MAXDIR 16 // 最大ディレクトリ数（Train/Valid 各 8 行）
+extern const UINT IDC_CMB_TRAIN_SRC[MAXDIR];
+extern const UINT IDC_CMB_VALID_SRC[MAXDIR];
+// ★各行の「Train用」「Valid用」チェックを独立IDに
+extern const UINT IDC_CHK_TRAIN_EN[MAXDIR];
+extern const UINT IDC_CHK_VALID_EN[MAXDIR];
+// スタティック表示先のID配列（既存のコンボ配列とペア）
+extern const UINT IDC_STC_TRAIN_SRC[MAXDIR];
+extern const UINT IDC_STC_VALID_SRC[MAXDIR];
+
 //
 void LogAppendANSI(const std::wstring& s);
 void AppendLog(const std::wstring& s);
@@ -29,12 +39,18 @@ bool LoadFlagFromIni(const wchar_t* key, bool def = false);
 std::string ToUTF8(const std::wstring& w);
 std::wstring FromUTF8(const std::string& s);
 void DoClearTemp(HWND hOwner,const UINT _ID ,bool confirm = true, bool keepRoot = false);
-
+void ApplyEnableFromCheck(HWND hDlg, UINT idChk, UINT idCombo);
+void UpdateFolderCounter(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT);
+uint64_t CountFilesUnder(const fs::path& root);
+void UpdateAllFolderCounts(HWND hDlg);
+void UpdateFolderCounter_Train(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT);
+void UpdateFolderCounter_Valid(HWND hDlg, const UINT ID_COMBO, const UINT ID_STATICTXT);
+bool ExportMultiCopyListToCSV(HWND hDlg);
+bool ImportMultiCopyListFromCSV(HWND hDlg);
 
 // ------------------------------
 // CopyMultiDlgのProc
 INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
 
 
 // 例: YoloTrainGUI.h など共通で見える場所
