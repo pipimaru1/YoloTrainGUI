@@ -1,44 +1,44 @@
 ﻿#pragma once
-#define IDI_APP						201
-#define IDI_APP_SMALL				202
+//#define IDI_APP						201
+//#define IDI_APP_SMALL				202
 
-#define IDC_CMB_PATIENCE          1801
-#define IDC_CMB_RESUME            1802
-#define IDC_CHK_EXIST_OK          1805
-#define IDC_CHECK_RESUME          1806
-#define IDC_BTN_RESUME_BROWSE     1807
-#define IDC_BTN_SAFE_DIR          1808
-#define IDC_STC_DATA_YAML         1809
-#define IDC_STC_TRAINPY           1810
-#define IDC_STC_PYTHONEXE         1811
-#define IDC_BTN_VIEW_PYENV		  1812
-#define IDC_BTN_CLEARTMP		  1813
-#define IDC_STC_WORKDIR           1814
-#define IDC_CHK_USEHYPERPARAM     1815
-#define IDC_RAD_YOLOV5			  1816   // 「YOLOv5」ラジオ
-#define IDC_RAD_YOLOV8            1817   // 「YOLOv8」ラジオ
-#define IDC_RAD_YOLO11            1818   // 「YOLO11」ラジオ
-#define IDC_GRP_YOLOVERSION       1819 
-#define IDC_STC_CFG               1823
+//#define IDC_CMB_PATIENCE          1801
+//#define IDC_CMB_RESUME            1802
+//#define IDC_CHK_EXIST_OK          1805
+//#define IDC_CHECK_RESUME          1806
+//#define IDC_BTN_RESUME_BROWSE     1807
+//#define IDC_BTN_SAFE_DIR          1808
+//#define IDC_STC_DATA_YAML         1809
+//#define IDC_STC_TRAINPY           1810
+//#define IDC_STC_PYTHONEXE         1811
+//#define IDC_BTN_VIEW_PYENV		  1812
+//#define IDC_BTN_CLEARTMP		  1813
+//#define IDC_STC_WORKDIR           1814
+//#define IDC_CHK_USEHYPERPARAM     1815
+//#define IDC_RAD_YOLOV5			  1816   // 「YOLOv5」ラジオ
+//#define IDC_RAD_YOLOV8            1817   // 「YOLOv8」ラジオ
+//#define IDC_RAD_YOLO11            1818   // 「YOLO11」ラジオ
+//#define IDC_GRP_YOLOVERSION       1819 
+//#define IDC_STC_CFG               1823
 
-#define IDC_RADIO_SEGMENT			1820
-#define IDC_RADIO_POSE				1821
-#define IDC_RADIO_CLASSIFY			1822
-#define IDC_GRP_YOLOVERSION2        1824
-#define IDC_CMB_PROXY_HTTP			1825
-#define IDC_CMB_PROXY_HTTPS			1826
-#define IDC_BTN_SETPROXY			1827
-#define IDC_BTN_NOPROXY				1828   // 新規追加ボタンID
-#define IDC_CHK_USEPROXY            1829   // 新規追加ボタンID
-#define IDC_STC_PROXY_HTTP          1830   // 新規追加ボタンID
-#define IDC_STC_PROXY_HTTPS         1831   // 新規追加ボタンID
-#define IDC_STC_CFGYAML             1832   // 新規追加ボタンID（例：Exportボタン）
-#define IDC_BTN_EDITHISTORY         1833   // 新規追加ボタンID（例：Exportボタン）
-#define IDC_BTN_CLEARLOG            1834   // 新規追加ボタンID（例：Exportボタン）
-#define IDC_CHK_LOG_CRLF2LF			1835   // チェックを入れると、ログファイルでCRLFをLFとする。
-#define IDC_BTN_CHKCRLF2LF          1836   // chk_crlf.pyを実行するボタン
-#define IDC_BTN_OPENTENSORBOARD     1837   // http://localhost:6006 を開くボタン
-#define IDC_BUTTON_APPLY_YAML		1838   // data.yamlを適用するボタン
+//#define IDC_RADIO_SEGMENT			1820
+//#define IDC_RADIO_POSE				1821
+//#define IDC_RADIO_CLASSIFY			1822
+//#define IDC_GRP_YOLOVERSION2        1824
+//#define IDC_CMB_PROXY_HTTP			1825
+//#define IDC_CMB_PROXY_HTTPS			1826
+//#define IDC_BTN_SETPROXY			1827
+//#define IDC_BTN_NOPROXY				1828   // 新規追加ボタンID
+//#define IDC_CHK_USEPROXY            1829   // 新規追加ボタンID
+//#define IDC_STC_PROXY_HTTP          1830   // 新規追加ボタンID
+//#define IDC_STC_PROXY_HTTPS         1831   // 新規追加ボタンID
+//#define IDC_STC_CFGYAML             1832   // 新規追加ボタンID（例：Exportボタン）
+//#define IDC_BTN_EDITHISTORY         1833   // 新規追加ボタンID（例：Exportボタン）
+//#define IDC_BTN_CLEARLOG            1834   // 新規追加ボタンID（例：Exportボタン）
+//#define IDC_CHK_LOG_CRLF2LF			1835   // チェックを入れると、ログファイルでCRLFをLFとする。
+//#define IDC_BTN_CHKCRLF2LF          1836   // chk_crlf.pyを実行するボタン
+//#define IDC_BTN_OPENTENSORBOARD     1837   // http://localhost:6006 を開くボタン
+//#define IDC_BUTTON_APPLY_YAML		1838   // data.yamlを適用するボタン
 
 /*
 リソース追加手順

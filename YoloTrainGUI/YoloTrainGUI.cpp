@@ -9,10 +9,8 @@
 #pragma comment(lib, "Comctl32.lib")
 
 #include "tools.hpp"
-
 #include "resource.h"
-#include "resource_user.h"
-
+//#include "resource_user.h"
 #include "YoloTrainGUI.h"
 #include "Tooltip.hpp"
 
@@ -403,6 +401,7 @@ static void Updated_UI(HWND hDlg)
     //IDC_BTN_EDIT_YAML,
     IDC_BTN_EDIT_CFG
     };
+    //コントロールの有効/無効をまとめて切り替える
     EnableControls(hDlg, ids, _countof(ids), isV5);
 
 	// Proxy UI 更新
@@ -438,27 +437,21 @@ static void Updated_UI(HWND hDlg)
 	};
 	EnableControls(hDlg, ids_optionstr, _countof(ids_optionstr), isOptionStr);
 
+
+    const BOOL isOptionShuffle = !(IsDlgButtonChecked(hDlg, IDC_CHK_SPLIT_SHUFFLE) == BST_CHECKED);
+    const int ids_optionsfl[] = {
+        IDC_RADIO_SPLITUNIT_1,
+        IDC_RADIO_SPLITUNIT_5,
+        IDC_RADIO_SPLITUNIT_10,
+        IDC_RADIO_SPLITUNIT_20,
+        IDC_RADIO_SPLITUNIT_50,
+        IDC_RADIO_SPLITUNIT_100
+    };
+    EnableControls(hDlg, ids_optionsfl, _countof(ids_optionsfl), isOptionShuffle);
+
 }
 
 // ------------------------------
-// ------------------------------
-
-// Count files recursively
-static uint64_t CountFiles(const fs::path& root)
-{
-    uint64_t cnt = 0;
-    if (!fs::exists(root)) return 0;
-    for (auto& p : fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
-        if (p.is_regular_file()) cnt++;
-    }
-    return cnt;
-}
-static bool EnsureDir(const fs::path& p)
-{
-    std::error_code ec;
-    if (fs::exists(p, ec)) return true;
-    return fs::create_directories(p, ec);
-}
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -591,72 +584,6 @@ static bool CopyTreeWithProgress_omp(const fs::path& src, const fs::path& dst)
 }
 /////////////////////////////////////////////////////////////////////////////////
 
-// ------------------------------
-// Split Dataset (based on your divfiles.cpp)  filecite：使用している分割ロジックは添付コードに準拠
-// ------------------------------
-static void SplitDataset(const fs::path& sourceRoot, const fs::path& destRoot,
-    int trainPercent, double reductionFactor)
-{
-    fs::path srcImages = sourceRoot / "images";
-    fs::path srcLabels = sourceRoot / "labels";
-
-    fs::path trainImages = destRoot / "train" / "images";
-    fs::path trainLabels = destRoot / "train" / "labels";
-    fs::path validImages = destRoot / "valid" / "images";
-    fs::path validLabels = destRoot / "valid" / "labels";
-
-    EnsureDir(trainImages); EnsureDir(trainLabels);
-    EnsureDir(validImages); EnsureDir(validLabels);
-
-    // collect *.jpg / *.JPG
-    std::vector<fs::path> jpgFiles;
-    for (auto& e : fs::directory_iterator(srcImages)) {
-        if (!e.is_regular_file()) continue;
-        auto ext = e.path().extension().wstring();
-        std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-        if (ext == L".jpg") jpgFiles.push_back(e.path());
-    }
-
-    // shuffle
-    std::random_device rd; std::mt19937 g(rd());
-    std::shuffle(jpgFiles.begin(), jpgFiles.end(), g);
-
-    // reduction
-    if (reductionFactor < 0.001) reductionFactor = 0.001;
-    if (reductionFactor > 1.0) reductionFactor = 1.0;
-    size_t total = jpgFiles.size();
-    size_t used = (size_t)std::ceil(total * reductionFactor);
-    if (used < jpgFiles.size()) jpgFiles.resize(used);
-
-    // train count
-    if (trainPercent < 1) trainPercent = 1;
-    if (trainPercent > 99) trainPercent = 99;
-    size_t nTrain = (size_t)std::ceil(used * (trainPercent / 100.0));
-
-    // copy train
-    for (size_t i = 0; i < nTrain && i < jpgFiles.size(); ++i) {
-        const auto& img = jpgFiles[i];
-        fs::copy_file(img, trainImages / img.filename(), fs::copy_options::overwrite_existing);
-        fs::path lblSrc = srcLabels / (img.stem().wstring() + L".txt");
-        if (fs::exists(lblSrc)) {
-            fs::copy_file(lblSrc, trainLabels / lblSrc.filename(), fs::copy_options::overwrite_existing);
-        }
-    }
-    // copy valid (rest)
-    for (size_t i = nTrain; i < jpgFiles.size(); ++i) {
-        const auto& img = jpgFiles[i];
-        fs::copy_file(img, validImages / img.filename(), fs::copy_options::overwrite_existing);
-        fs::path lblSrc = srcLabels / (img.stem().wstring() + L".txt");
-        if (fs::exists(lblSrc)) {
-            fs::copy_file(lblSrc, validLabels / lblSrc.filename(), fs::copy_options::overwrite_existing);
-        }
-    }
-    AppendLog(L"[SPLIT] Done. total=" + std::to_wstring(total) +
-        L" used=" + std::to_wstring(used) +
-        L" train=" + std::to_wstring(nTrain) +
-        L" valid=" + std::to_wstring(used - nTrain));
-	AppendLog(RET);
-}
 
 // ------------------------------
 // Process runner with output capture
@@ -899,7 +826,7 @@ int TrainParams::ReadControls(HWND hDlg)
 
     //チェックボックスの状態を取得
     chkResume = IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME);
-    chkCache = IsDlgButtonChecked(hDlg, IDC_CHK_CACHE);
+    chkCache = IsDlgButtonChecked(hDlg,  IDC_CHK_CACHE);
     chkUseHyp = IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM);
 
     // v8 only
@@ -1270,6 +1197,15 @@ static void DoCopyToTemp()
 
 static void DoSplit()
 {
+    int splitunit = 1;
+    if (IsDlgButtonChecked(g_hDlg, IDC_RADIO_SPLITUNIT_5) == BST_CHECKED) splitunit = 5;
+    else if (IsDlgButtonChecked(g_hDlg, IDC_RADIO_SPLITUNIT_10) == BST_CHECKED) splitunit = 10;
+	else if (IsDlgButtonChecked(g_hDlg, IDC_RADIO_SPLITUNIT_20) == BST_CHECKED) splitunit = 20;
+	else if (IsDlgButtonChecked(g_hDlg, IDC_RADIO_SPLITUNIT_50) == BST_CHECKED) splitunit = 50;
+	else if (IsDlgButtonChecked(g_hDlg, IDC_RADIO_SPLITUNIT_100) == BST_CHECKED) splitunit = 100;
+
+    bool _is_shuffle = IsDlgButtonChecked(g_hDlg, IDC_CHK_SPLIT_SHUFFLE);
+
     std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
     int trainPct = _wtoi(GetText(g_hDlg, IDC_EDIT_TRAINPCT).c_str());
     float reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
@@ -1281,16 +1217,16 @@ static void DoSplit()
 
     fs::path src = fs::path(tmp) / "source";
     fs::path dst = fs::path(tmp) / "dataset";
-    try 
-    { 
-        if (fs::exists(dst)) 
-            fs::remove_all(dst); 
+    try
+    {
+        if (fs::exists(dst))
+            fs::remove_all(dst);
     }
     catch (...) {}
     ResetProgress();
     AppendLog(L"[SPLIT] source=" + src.wstring() + L"   dest=" + dst.wstring());
     AppendLog(RET);
-    SplitDataset(src, dst, trainPct, reduc);   // based on your divfiles.cpp  :contentReference[oaicite:2]{index=2}
+    SplitDataset(src, dst, trainPct, reduc, _is_shuffle, splitunit);   // based on your divfiles.cpp  :contentReference[oaicite:2]{index=2}
     SetProgress(100);
 }
 
@@ -1367,6 +1303,34 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         else {
             SaveMRU(L"backend", L"YOLOV5");
 	    }
+
+        // チェックボックスは "1" / "0" を保存
+        chkCache = (IsDlgButtonChecked(hDlg, IDC_CHK_SPLIT_SHUFFLE) == BST_CHECKED);
+        SaveMRU(L"SplitShuffle", chkCache ? L"1" : L"0");
+
+        // Split Unitラジオボタンの状態を保存
+        if (IsDlgButtonChecked(hDlg, IDC_RADIO_SPLITUNIT_1) == BST_CHECKED) {
+            SaveMRU(L"SplitUnit", L"1");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RADIO_SPLITUNIT_5) == BST_CHECKED) {
+            SaveMRU(L"SplitUnit", L"5");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RADIO_SPLITUNIT_10) == BST_CHECKED) {
+            SaveMRU(L"SplitUnit", L"10");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RADIO_SPLITUNIT_20) == BST_CHECKED) {
+            SaveMRU(L"SplitUnit", L"20");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RADIO_SPLITUNIT_50) == BST_CHECKED) {
+            SaveMRU(L"SplitUnit", L"50");
+        }
+        else if (IsDlgButtonChecked(hDlg, IDC_RADIO_SPLITUNIT_100) == BST_CHECKED) {
+            SaveMRU(L"SplitUnit", L"100");
+        }
+        else
+        {
+            SaveMRU(L"SplitUnit", L"1");
+        }
 
         // v8/v11 用の HTTP/HTTPS プロキシ設定
         SaveMRU(L"proxy_http", GetText(hDlg, IDC_CMB_PROXY_HTTP));
@@ -1598,17 +1562,39 @@ static void InitDialog(HWND hDlg)
 
     if( backend == L"YOLOV5") {
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5);
-    }
-    else if (backend == L"YOLOV8") {
+    }else if (backend == L"YOLOV8") {
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV8);
-    }
-    else if (backend == L"YOLO11") {
+    }else if (backend == L"YOLO11") {
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLO11);
-    }
-    else {
+    }else {
         CheckRadioButton(hDlg, IDC_RAD_YOLOV5, IDC_RAD_YOLO11, IDC_RAD_YOLOV5); // default
 	}
 
+    CheckDlgButton(hDlg, IDC_CHK_SPLIT_SHUFFLE, LoadFlagFromIni(L"SplitShuffle", false) ? BST_CHECKED : BST_UNCHECKED);
+    
+    std::wstring SplitUnit = LoadMRUToString(L"SplitUnit");
+    if (SplitUnit == L"1") {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_1);
+    }
+    else if (SplitUnit == L"5") {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_5);
+    }
+    else if (SplitUnit == L"10") {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_10);
+    }
+    else if (SplitUnit == L"20") {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_20);
+    }
+    else if (SplitUnit == L"50") {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_50);
+    }
+    else if (SplitUnit == L"100") {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_100);
+    }
+    else {
+        CheckRadioButton(hDlg, IDC_RADIO_SPLITUNIT_1, IDC_RADIO_SPLITUNIT_100, IDC_RADIO_SPLITUNIT_1); // default
+	}
+ 
     // チェックボックス設定の後、関連するコントロールをグレーアウトしたりする
     Updated_UI(hDlg);
 
@@ -1998,43 +1984,13 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                         //return TRUE;
                     }
                 }break;
+                case IDC_CHK_SPLIT_SHUFFLE:
                 case IDC_RAD_YOLOV5:
                 case IDC_RAD_YOLOV8:
                 case IDC_RAD_YOLO11:
-                //{
-                //    if (HIWORD(wParam) == BN_CLICKED) {
-                //        Updated_UI(hDlg);
-                //        return TRUE;
-                //    }
-                //}break;
                 case IDC_CHK_USEPROXY:
-                //{
-                //    if (HIWORD(wParam) == BN_CLICKED)
-                //    {
-                //        Updated_UI(hDlg);
-                //        return TRUE;
-                //    }
-                //}break;
-
                 case IDC_CHK_USEHYPERPARAM:
-                //{
-                //    if (HIWORD(wParam) == BN_CLICKED)
-                //    {
-                //        Updated_UI(hDlg);
-                //        return TRUE;
-                //    }
-                //}break;
-
                 case IDC_CHECK_RESUME:
-                //{
-                //    if (HIWORD(wParam) == BN_CLICKED)
-                //    {
-                //        Updated_UI(hDlg);
-                //        return TRUE;
-                //    }
-                //}break;
-
-
                 case IDC_CHK_OPTION_STR:
                 {
                     if (HIWORD(wParam) == BN_CLICKED)

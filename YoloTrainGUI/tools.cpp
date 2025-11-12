@@ -3,8 +3,6 @@
 
 #include "tools.hpp"
 
-
-
 // ------------------------------
 // ComboBox helpers
 // ------------------------------
@@ -22,6 +20,22 @@ void SetComboText(HWND hCombo, const std::wstring& s)
     SendMessageW(hCombo, WM_SETTEXT, 0, (LPARAM)s.c_str());
 }
 
+// Count files recursively
+uint64_t CountFiles(const fs::path& root)
+{
+    uint64_t cnt = 0;
+    if (!fs::exists(root)) return 0;
+    for (auto& p : fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
+        if (p.is_regular_file()) cnt++;
+    }
+    return cnt;
+}
+bool EnsureDir(const fs::path& p)
+{
+    std::error_code ec;
+    if (fs::exists(p, ec)) return true;
+    return fs::create_directories(p, ec);
+}
 
 // ------------------------------
 // IFileDialog helpers

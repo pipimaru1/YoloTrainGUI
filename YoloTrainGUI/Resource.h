@@ -5,6 +5,8 @@
 #define VS_VERSION_INFO                 1
 #define IDCANCEL2                       3
 #define IDD_MAIN                        101
+#define IDI_APP                         201
+#define IDI_APP_SMALL                   202
 #define IDC_COMBO_IMG                   1001
 #define IDC_BTN_BROWSE_IMG              1002
 #define IDC_COMBO_LABEL                 1003
@@ -50,7 +52,8 @@
 #define IDC_BTN_OPEN_COPY_MULTI         1074
 #define IDC_COMBO_OPTION_STR            1075
 #define IDC_CHK_OPTION_STR              1076
-
+#define IDC_RADIO2                      1078
+#define IDC_CHECK1                      1079
 #define IDD_COPY_MULTI                  1200
 #define IDC_PROGRESS_COPY               1201
 #define IDC_BTN_COPY_TO_TEMP            1202
@@ -63,7 +66,6 @@
 #define IDC_STATIC_TOTAL_VL             1210
 #define IDC_BTN_EXPORTLIST_MCOPY        1211
 #define IDC_BTN_IMPORTLIST_MCOPY        1212
-
 #define IDC_CMB_TRAIN_SRC_0             1220
 #define IDC_CMB_TRAIN_SRC_1             1221
 #define IDC_CMB_TRAIN_SRC_2             1222
@@ -192,6 +194,50 @@
 #define IDC_STATIC_VALID_SRC_13         1373
 #define IDC_STATIC_VALID_SRC_14         1374
 #define IDC_STATIC_VALID_SRC_15         1375
+#define IDC_CMB_PATIENCE                1801
+#define IDC_CMB_RESUME                  1802
+#define IDC_CHK_EXIST_OK                1805
+#define IDC_CHECK_RESUME                1806
+#define IDC_BTN_RESUME_BROWSE           1807
+#define IDC_BTN_SAFE_DIR                1808
+#define IDC_STC_DATA_YAML               1809
+#define IDC_STC_TRAINPY                 1810
+#define IDC_STC_PYTHONEXE               1811
+#define IDC_BTN_VIEW_PYENV              1812
+#define IDC_BTN_CLEARTMP                1813
+#define IDC_STC_WORKDIR                 1814
+#define IDC_CHK_USEHYPERPARAM           1815
+#define IDC_RAD_YOLOV5                  1816
+#define IDC_RAD_YOLOV8                  1817
+#define IDC_RAD_YOLO11                  1818
+#define IDC_GRP_YOLOVERSION             1819
+#define IDC_RADIO_SEGMENT               1820
+#define IDC_RADIO_POSE                  1821
+#define IDC_RADIO_CLASSIFY              1822
+#define IDC_STC_CFG                     1823
+#define IDC_GRP_YOLOVERSION2            1824
+#define IDC_CMB_PROXY_HTTP              1825
+#define IDC_CMB_PROXY_HTTPS             1826
+#define IDC_BTN_SETPROXY                1827
+#define IDC_BTN_NOPROXY                 1828
+#define IDC_CHK_USEPROXY                1829
+#define IDC_STC_PROXY_HTTP              1830
+#define IDC_STC_PROXY_HTTPS             1831
+#define IDC_STC_CFGYAML                 1832
+#define IDC_BTN_EDITHISTORY             1833
+#define IDC_BTN_CLEARLOG                1834
+#define IDC_CHK_LOG_CRLF2LF             1835
+#define IDC_BTN_CHKCRLF2LF              1836
+#define IDC_BTN_OPENTENSORBOARD         1837
+#define IDC_BUTTON_APPLY_YAML           1838
+
+#define IDC_CHK_SPLIT_SHUFFLE           1849
+#define IDC_RADIO_SPLITUNIT_1           1850
+#define IDC_RADIO_SPLITUNIT_5           1851
+#define IDC_RADIO_SPLITUNIT_10          1852
+#define IDC_RADIO_SPLITUNIT_20          1853
+#define IDC_RADIO_SPLITUNIT_50          1854
+#define IDC_RADIO_SPLITUNIT_100         1855
 
 // Next default values for new objects
 // 
@@ -199,7 +245,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1077
+#define _APS_NEXT_CONTROL_VALUE         1080
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

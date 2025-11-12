@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "tools.hpp"
 #include "resource.h"
-#include "resource_user.h"
+//#include "resource_user.h"
 #include "YoloTrainGUI.h"
 #include "Tooltip.hpp"
 
