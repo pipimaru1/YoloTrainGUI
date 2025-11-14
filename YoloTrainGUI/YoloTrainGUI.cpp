@@ -1168,24 +1168,36 @@ static void DoCopyToTemp()
 
     if(0){
         if (!CopyTreeWithProgress(img, dstImages))
+        {
+            AppendLog(L"[COPY Images] Not Completed.");
             return;
+        }
     }
     else {//並列版
-        if (!CopyTreeWithProgress_omp(img, dstImages));
+        if (!CopyTreeWithProgress_omp(img, dstImages))
+        {
+            AppendLog(L"[COPY Images] Not Completed.");
             return;
+        }
     }
-    
 
     AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
     AppendLog(RET);
     if(0)
     {
         if (!CopyTreeWithProgress(lab, dstLabels))
+        {
+            AppendLog(L"[COPY Labels] Not Completed.");
             return;
+        }
     }
     else {
         if (!CopyTreeWithProgress_omp(lab, dstLabels))
+        {
+            AppendLog(L"[COPY Labels] Not Completed.");
             return;
+        }
+    
     }
     SetProgress(100);
     AppendLog(L"[COPY] Completed.");
