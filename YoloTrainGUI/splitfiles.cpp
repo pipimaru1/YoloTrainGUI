@@ -100,7 +100,92 @@ void SplitDataset(
             L" valid=" + std::to_wstring(used - nTrain));
         AppendLog(RET);
     }
-    else //誤差蓄積法でファイルをN個おきに分ける
+    else //誤差蓄積法でファイルをN個おきに分ける splitunit単位
+    {
+        const float r = static_cast<float>(trainPercent) / 100.0f;
+        float acc = 0.0f;
+
+		int count_train_image = 0;
+        int count_train_label = 0;
+		int count_valid_image = 0;
+		int count_valid_label = 0;
+		bool _ret = false;
+
+        // 0 以下が来ても壊れないようにガード
+        int splitunit = _splitunit;
+        if (splitunit <= 0) splitunit = 1;
+
+        size_t i = 0;
+        const size_t N = jpgFiles.size();
+
+        while (i < N)
+        {
+            // このブロックの先頭とサイズ
+            size_t blockBegin = i;
+            size_t blockSize = std::min<size_t>(splitunit, N - blockBegin);
+
+            // 誤差拡散で「このブロック train か valid か」を決定
+            acc += r;
+            bool blockIsTrain = false;
+            if (acc >= 1.0f) {
+                blockIsTrain = true;
+                acc -= 1.0f;
+            }
+
+            // ブロック内のファイルを一気にコピー（なるべく連続）
+            for (size_t j = 0; j < blockSize; ++j, ++i)
+            {
+                const auto& img = jpgFiles[i];
+
+                fs::path lblSrc = srcLabels / (img.stem().wstring() + L".txt");
+
+                if (blockIsTrain) {
+                    _ret=fs::copy_file(img, trainImages / img.filename(),
+                        fs::copy_options::overwrite_existing);
+                    if (_ret)
+                        ++count_train_image;
+
+                    if (fs::exists(lblSrc)) {
+                        _ret = fs::copy_file(lblSrc, trainLabels / lblSrc.filename(),
+                            fs::copy_options::overwrite_existing);
+                        if (_ret)
+							++count_train_label;
+                    }
+                }
+                else {
+                    _ret = fs::copy_file(img, validImages / img.filename(),
+                        fs::copy_options::overwrite_existing);
+                    if (_ret)
+						++count_valid_image;
+
+                    if (fs::exists(lblSrc)) {
+                        _ret = fs::copy_file(lblSrc, validLabels / lblSrc.filename(),
+                            fs::copy_options::overwrite_existing);
+                        if (_ret)
+							++count_valid_label;
+                    }
+                }
+            }
+        }
+        AppendLog(L"[SPLIT] Done. total=" + std::to_wstring(total) +
+            L" used=" + std::to_wstring(used));
+        AppendLog(RET);
+
+        AppendLog(L"[SPLIT] Done. Cpied total=" + std::to_wstring(
+            count_train_image + count_valid_image + count_train_label + count_valid_label
+        ));
+        AppendLog(RET);
+
+        AppendLog(L" train_image=" + std::to_wstring(count_train_image) + RET);
+        AppendLog(L" train_label=" + std::to_wstring(count_train_label) + RET);
+        AppendLog(L" valid_image=" + std::to_wstring(count_valid_image) + RET);
+        AppendLog(L" valid_label=" + std::to_wstring(count_valid_label) + RET);
+
+		float actualTrainPct = count_train_image/(float)(count_train_image + count_valid_image) * 100.0f;
+		AppendLog(L"[SPLIT] Actual train%=" + std::to_wstring(actualTrainPct) + L" %"+RET);
+    }
+
+    /*
     {
         float _r = (float)trainPercent / 100.0f;
         float acc = 0.0f;
@@ -129,4 +214,5 @@ void SplitDataset(
             }
         }
     }
+    */
 }
