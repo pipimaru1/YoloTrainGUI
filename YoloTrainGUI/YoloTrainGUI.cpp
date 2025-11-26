@@ -1157,8 +1157,18 @@ static void DoCopyToTemp()
 
     // Clean previous
     try {
-        if (fs::exists(dstImages)) fs::remove_all(dstImages);
-        if (fs::exists(dstLabels)) fs::remove_all(dstLabels);
+        if (fs::exists(dstImages))
+        {
+            fs::remove_all(dstImages);
+			AppendLog(L"[COPY] Removed previous images: " + dstImages.wstring());
+            AppendLog(RET);
+        }
+        if (fs::exists(dstLabels))
+        {
+            fs::remove_all(dstLabels);
+			AppendLog(L"[COPY] Removed previous labels: " + dstLabels.wstring());
+            AppendLog(RET);
+        }
     }
     catch (...) {}
 
@@ -1166,39 +1176,33 @@ static void DoCopyToTemp()
     AppendLog(L"[COPY] images -> " + dstImages.wstring());
     AppendLog(RET);
 
-    if(0){
-        if (!CopyTreeWithProgress(img, dstImages))
-        {
-            AppendLog(L"[COPY Images] Not Completed.");
-            return;
-        }
+    //並列版
+    if (CopyTreeWithProgress_omp(img, dstImages))
+    {
+        AppendLog(L"[COPY] Images Completed.");
+        AppendLog(RET);
     }
-    else {//並列版
-        if (!CopyTreeWithProgress_omp(img, dstImages))
-        {
-            AppendLog(L"[COPY Images] Not Completed.");
-            return;
-        }
+    else
+    {
+        AppendLog(L"[COPY] Images Not Completed.");
+        AppendLog(RET);
+        return;
     }
-
+  
     AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
     AppendLog(RET);
-    if(0)
+    if (CopyTreeWithProgress_omp(lab, dstLabels))
     {
-        if (!CopyTreeWithProgress(lab, dstLabels))
-        {
-            AppendLog(L"[COPY Labels] Not Completed.");
-            return;
-        }
+        AppendLog(L"[COPY] Labels Completed.");
+        AppendLog(RET);
     }
-    else {
-        if (!CopyTreeWithProgress_omp(lab, dstLabels))
-        {
-            AppendLog(L"[COPY Labels] Not Completed.");
-            return;
-        }
-    
+	else
+    {
+        AppendLog(L"[COPY] Labels Not Completed.");
+        AppendLog(RET);
+        return;
     }
+
     SetProgress(100);
     AppendLog(L"[COPY] Completed.");
     AppendLog(RET);
