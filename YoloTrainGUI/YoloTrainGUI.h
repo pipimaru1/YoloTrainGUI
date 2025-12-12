@@ -100,6 +100,9 @@ class TrainParams {
     int exist_ok = 0; // 0 or 1
     int chkUseProxy = 0; // 0 or 1
 
+    //ラベルのあるファイルのみコピーする
+    //int _IDC_BUTTON_APPLY_YAML = 0; // 0 or 1
+
     // v8 only
     std::wstring task;    // detect/segment/pose/classify
     std::wstring backend; // "YOLOV5" or "YOLOV8" or "YOLO11"

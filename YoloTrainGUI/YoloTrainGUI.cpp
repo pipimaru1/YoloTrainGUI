@@ -102,16 +102,126 @@ L"Tempフォルダをdata.yamlに適用します。\r\n";
 
 void SetTootips(HWND hDlg)
 {
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"Tempolary Directory", strTipTempDir.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DATA_YAML, L"Tempolary Directory", strTipDataYaml.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_EDIT_YAML, L"Tempolary Directory", strTipDataYaml.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"train.py", strTipTrainPy.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PYTHONEXE, L"train.py", strTipPythonExe.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WORKDIR, L"WorkDir", strTipWorkDir.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"Git Safe", strGitSafe.c_str());   
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"Python Env", strChkEnv.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"YOLO GUI", strTipTempDir.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DATA_YAML, L"YOLO GUI", strTipDataYaml.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_EDIT_YAML, L"YOLO GUI", strTipDataYaml.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"YOLO GUI", strTipTrainPy.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PYTHONEXE, L"YOLO GUI", strTipPythonExe.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WORKDIR, L"YOLO GUI", strTipWorkDir.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"YOLO GUI", strGitSafe.c_str());   
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"YOLO GUI", strChkEnv.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_CFGYAML, L"CFG Yaml", strTipCfgYaml.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BUTTON_APPLY_YAML, L"CFG Yaml", strTipAutoEditYamlBtn.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BUTTON_APPLY_YAML, L"YOLO GUI", strTipAutoEditYamlBtn.c_str());
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_ONLY_WITH_LABEL, 
+        L"YOLO GUI", 
+        std::wstring(L"ラベルファイルのあるデータのみコピーします。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_GRP_YOLOVERSION,
+        L"YOLO GUI",
+        std::wstring(L"Yoloのバージョンを指定します。\r\n対応はyolov5、yolov8、yolo11です。\r\nyolov8とyolo11のラーニング環境は同じです。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RAD_YOLOV5,
+        L"YOLO GUI",
+        std::wstring(L"Yoloのバージョンを指定します。\r\n対応はyolov5、yolov8、yolo11です。\r\nyolov8とyolo11のラーニング環境は同じです。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RAD_YOLOV8,
+        L"YOLO GUI",
+        std::wstring(L"Yoloのバージョンを指定します。\r\n対応はyolov5、yolov8、yolo11です。\r\nyolov8とyolo11のラーニング環境は同じです。").c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_USEPROXY,
+        L"YOLO GUI",
+        std::wstring(L"プロキシ環境の時はチェックしてください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PROXY_HTTP,
+        L"YOLO GUI",
+        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PROXY_HTTPS,
+        L"YOLO GUI",
+        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_PROXY_HTTP,
+        L"YOLO GUI",
+        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_PROXY_HTTPS,
+        L"YOLO GUI",
+        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_IMG,
+        L"YOLO GUI",
+        std::wstring(L"[ソース]イメージファイルのあるフォルダを指定").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_LABEL,
+        L"YOLO GUI",
+        std::wstring(L"[ソース]ラベルファイルのあるフォルダを指定").c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_TEMP,
+        L"YOLO GUI",
+        std::wstring(L"テンポラリフォルダを指定してください。ソースからこのフォルダにコピーします。\r\n"
+            L"【注意】CLR Tempで、このフォルダは丸ごと消されます。専用のフォルダを作成して指定するようにしてください。"
+        ).c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_OPEN_COPY_MULTI,
+        L"YOLO GUI",
+        std::wstring(L"フォルダ毎にTrainとValidを指定する場合はこのボタンを押してください。").c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_CLEARTMP,
+        L"YOLO GUI",
+        std::wstring(L"テンポラリフォルダを消去します。【注意】フォルダごと消します。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_COPY,
+        L"YOLO GUI",
+        std::wstring(L"ソースからテンポラリへコピーを開始します。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_ONLY_WITH_LABEL,
+        L"YOLO GUI",
+        std::wstring(L"ラベルファイルのあるペアのみコピーします。").c_str()
+    );
+
+    static std::wstring strIDC_RADIO_SPLITUNIT =
+        L"TrainとValidに分割するときの、連続するファイル数単位を指定します。\n\r"
+        L"連続する似た画像がTrainとValid両方に入ることを抑制します。"
+        L"汎化性能の向上の可能性があります。";
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_1,   L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
+	ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_5,   L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
+	ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_10,  L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_20,  L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_50,  L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_100, L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SPLIT,
+        L"YOLO GUI",
+        std::wstring(L"テンポラリフォルダのデータセットをTrainとValidに分割します。\r\n"
+        L"分割したデータは別のフォルダにコピーされます。").c_str()
+    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_TRAINPCT,
+        L"YOLO GUI",
+        std::wstring(L"Trainに割り当てるデータの割合を%で指定してください。\r\n"
+         L"ふつうは80です。").c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_REDUCTION,
+        L"YOLO GUI",
+        std::wstring(L"使うデータの割合を係数で指定してください。\r\n"
+            L"分からなければ1.0を指定してください。\r\n"
+            L"大きなデータセットのテストなどでデータを減らしたいときに使います。").c_str()
+    );
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_SPLIT_SHUFFLE,
+        L"YOLO GUI",
+        std::wstring(L"データを分割するときランダムな順番にしてから分割します。\r\n"
+            L"毎回結果が変わります。\r\n"
+            L"デフォルトでは規則な順番で分割します。").c_str()
+    );
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -824,6 +934,9 @@ int TrainParams::ReadControls(HWND hDlg)
 	https_proxy = GetText(hDlg, IDC_CMB_PROXY_HTTPS);
 	chkUseProxy = IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY);
 
+    //ラベルのあるファイルのみコピーする
+    //_IDC_BUTTON_APPLY_YAML = IsDlgButtonChecked(hDlg, IDC_BUTTON_APPLY_YAML);
+
     //チェックボックスの状態を取得
     chkResume = IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME);
     chkCache = IsDlgButtonChecked(hDlg,  IDC_CHK_CACHE);
@@ -1140,7 +1253,7 @@ void TrainParams::DoTrain()
 // ------------------------------
 // Actions
 // ------------------------------
-static void DoCopyToTemp()
+static void DoCopyToTemp_old()
 {
     std::wstring img = GetText(g_hDlg, IDC_COMBO_IMG);
     std::wstring lab = GetText(g_hDlg, IDC_COMBO_LABEL);
@@ -1210,6 +1323,208 @@ static void DoCopyToTemp()
     SaveMRU(L"Label Data", lab);
     SaveMRU(L"Temp Dir", tmp);
 }
+//ラベル付きだけコピーするヘルパ
+// ラベル(.txt)が存在する画像だけをコピーする並列版
+static bool CopyOnlyLabeled_omp(
+    const fs::path& srcImagesRoot,
+    const fs::path& srcLabelsRoot,
+    const fs::path& dstImagesRoot,
+    const fs::path& dstLabelsRoot)
+{
+    if (!fs::exists(srcImagesRoot)) {
+        AppendLog(L"[COPY] Image source not found: " + srcImagesRoot.wstring());
+        AppendLog(RET);
+        return false;
+    }
+    if (!fs::exists(srcLabelsRoot)) {
+        AppendLog(L"[COPY] Label source not found: " + srcLabelsRoot.wstring());
+        AppendLog(RET);
+        return false;
+    }
+
+    if (!EnsureDir(dstImagesRoot) || !EnsureDir(dstLabelsRoot)) {
+        AppendLog(L"[COPY] Cannot create dst root.");
+        AppendLog(RET);
+        return false;
+    }
+
+    struct LabeledPair {
+        fs::path srcImg;
+        fs::path dstImg;
+        fs::path srcLbl;
+        fs::path dstLbl;
+    };
+
+    std::vector<LabeledPair> pairs;
+    pairs.reserve(4096);
+
+    // 1) label 側を再帰的に走査して .txt を列挙
+    for (auto it = fs::recursive_directory_iterator(
+        srcLabelsRoot,
+        fs::directory_options::skip_permission_denied);
+        it != fs::recursive_directory_iterator(); ++it)
+    {
+        if (!it->is_regular_file()) continue;
+
+        auto lblPath = it->path();
+        auto ext = lblPath.extension().wstring();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+        if (ext != L".txt") continue;
+
+        // ラベルからの相対パス (例: subdir/xxxx.txt)
+        fs::path relLbl = fs::relative(lblPath, srcLabelsRoot);
+        fs::path relStem = relLbl;
+        relStem.replace_extension(); // "subdir/xxxx"
+
+        // 対応する画像ファイルを探す
+        fs::path srcImg;
+        for (const wchar_t* e : { L".jpg", L".jpeg", L".png", L".bmp" }) {
+            fs::path cand = srcImagesRoot / relStem;
+            cand.replace_extension(e);
+            if (fs::exists(cand)) {
+                srcImg = cand;
+                break;
+            }
+        }
+        if (srcImg.empty()) {
+            // 対応する画像が無ければスキップ
+            continue;
+        }
+
+        // 保存先 (相対構造は維持)
+        fs::path dstImg = dstImagesRoot / fs::relative(srcImg, srcImagesRoot);
+        fs::path dstLbl = dstLabelsRoot / relLbl;
+
+        pairs.push_back({ srcImg, dstImg, lblPath, dstLbl });
+    }
+
+    if (pairs.empty()) {
+        AppendLog(L"[COPY] No labeled images found.");
+        AppendLog(RET);
+        NotifyProgressPercent(0);
+        return true; // データが無いだけなのでエラーではない扱いにする
+    }
+
+    const uint64_t total = static_cast<uint64_t>(pairs.size());
+    std::atomic<uint64_t> done{ 0 };
+
+    const int max_threads = (std::min)(8, (std::max)(2, omp_get_max_threads()));
+
+#pragma omp parallel for schedule(dynamic,1) num_threads(max_threads)
+    for (int i = 0; i < (int)pairs.size(); ++i) {
+        const auto& p = pairs[i];
+        std::error_code ec;
+
+        EnsureDir(p.dstImg.parent_path());
+        EnsureDir(p.dstLbl.parent_path());
+
+        fs::copy_file(p.srcImg, p.dstImg, fs::copy_options::overwrite_existing, ec);
+        fs::copy_file(p.srcLbl, p.dstLbl, fs::copy_options::overwrite_existing, ec);
+
+        uint64_t cur = ++done;
+        if ((cur & 0x3F) == 0 || cur == total) {
+            int pct = (int)((cur * 100) / total);
+            NotifyProgressPercent(pct);
+        }
+    }
+
+    NotifyProgressPercent(100);
+    AppendLog(L"[COPY] Labeled images copied: " + std::to_wstring(pairs.size()));
+    AppendLog(RET);
+    return true;
+}
+//////////////////////////////////////////////////////////////////////////
+// DoCopyToTemp を引数付きに変更
+// DoCopyToTemp(bool only_with_label = false) に変更
+// only_with_label == false のときは、今まで通り全部コピー
+// only_with_label == true のときは
+// lab 側を再帰走査して.txt を列挙
+// 同じ相対パス＋拡張子(.jpg / .jpeg / .png / .bmp) を img 側から探す
+// 見つかったペアだけ dstImages / dstLabels にコピー
+// 進捗バーは「ペア数」で更新
+// 既存の OpenMP 進捗通知(NotifyProgressPercent) を流用
+// Actions
+// only_with_label = true のときは「label が存在する画像だけ」コピー
+static void DoCopyToTemp(bool only_with_label /*= false*/)
+{
+    std::wstring img = GetText(g_hDlg, IDC_COMBO_IMG);
+    std::wstring lab = GetText(g_hDlg, IDC_COMBO_LABEL);
+    std::wstring tmp = GetText(g_hDlg, IDC_COMBO_TEMP);
+    if (img.empty() || lab.empty() || tmp.empty())
+    {
+        AppendLog(L"[COPY] Missing path.");
+        AppendLog(RET);
+        return;
+    }
+
+    fs::path dstImages = fs::path(tmp) / "source" / "images";
+    fs::path dstLabels = fs::path(tmp) / "source" / "labels";
+
+    // Clean previous
+    try {
+        if (fs::exists(dstImages)) {
+            fs::remove_all(dstImages);
+            AppendLog(L"[COPY] Removed previous images: " + dstImages.wstring());
+            AppendLog(RET);
+        }
+        if (fs::exists(dstLabels)) {
+            fs::remove_all(dstLabels);
+            AppendLog(L"[COPY] Removed previous labels: " + dstLabels.wstring());
+            AppendLog(RET);
+        }
+    }
+    catch (...) {}
+
+    ResetProgress();
+
+    if (!only_with_label)
+    {
+        // ==== 従来通り: 全部コピー ====
+        AppendLog(L"[COPY] (all files) images -> " + dstImages.wstring());
+        AppendLog(RET);
+
+        if (!CopyTreeWithProgress_omp(img, dstImages)) {
+            AppendLog(L"[COPY] Images Not Completed.");
+            AppendLog(RET);
+            return;
+        }
+        AppendLog(L"[COPY] Images Completed.");
+        AppendLog(RET);
+
+        AppendLog(L"[COPY] (all files) labels -> " + dstLabels.wstring());
+        AppendLog(RET);
+
+        if (!CopyTreeWithProgress_omp(lab, dstLabels)) {
+            AppendLog(L"[COPY] Labels Not Completed.");
+            AppendLog(RET);
+            return;
+        }
+        AppendLog(L"[COPY] Labels Completed.");
+        AppendLog(RET);
+    }
+    else
+    {
+        // ==== 新モード: label のある画像だけコピー ====
+        AppendLog(L"[COPY] (only labeled) images/labels -> "
+            + (fs::path(tmp) / "source").wstring());
+        AppendLog(RET);
+
+        if (!CopyOnlyLabeled_omp(img, lab, dstImages, dstLabels)) {
+            AppendLog(L"[COPY] Labeled copy Not Completed.");
+            AppendLog(RET);
+            return;
+        }
+    }
+
+    SetProgress(100);
+    AppendLog(L"[COPY] Completed.");
+    AppendLog(RET);
+
+    SaveMRU(L"Image Data", img);
+    SaveMRU(L"Label Data", lab);
+    SaveMRU(L"Temp Dir", tmp);
+}
+
 
 static void DoSplit()
 {
@@ -1561,6 +1876,8 @@ static void InitDialog(HWND hDlg)
     CheckDlgButton(hDlg, IDC_CHECK_RESUME,      LoadFlagFromIni(L"resume_chk",  false) ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(hDlg, IDC_CHK_USEHYPERPARAM, LoadFlagFromIni(L"hyper_chk",   false) ? BST_CHECKED : BST_UNCHECKED);
 	CheckDlgButton(hDlg, IDC_CHK_USEPROXY,      LoadFlagFromIni(L"chkUseProxy", false) ? BST_CHECKED : BST_UNCHECKED);
+
+    CheckDlgButton(hDlg, IDC_BUTTON_APPLY_YAML, LoadFlagFromIni(L"IDC_BUTTON_APPLY_YAML", false) ? BST_CHECKED : BST_UNCHECKED);
 
 	LoadMRUToTextControl(GetDlgItem(hDlg, IDC_EDIT_PROJECT), L"project");
     ShowFirstComboItem(GetDlgItem(hDlg, IDC_EDIT_PROJECT));           
@@ -1967,7 +2284,10 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 case IDC_BTN_COPY: {
                     if (HIWORD(wParam) != BN_CLICKED)
                         return TRUE; // これ必須：押下以外は無視
-                    std::thread([]() { DoCopyToTemp(); }).detach();
+
+					//IDC_CHK_ONLY_WITH_LABELの状態を取得
+					bool isOnllyWithKabel = (IsDlgButtonChecked(hDlg, IDC_CHK_ONLY_WITH_LABEL) == BST_CHECKED);
+                    std::thread([&isOnllyWithKabel]() { DoCopyToTemp(isOnllyWithKabel); }).detach();
                 }break;
                 case IDC_BTN_SPLIT: {
                     if (HIWORD(wParam) != BN_CLICKED)

@@ -230,6 +230,8 @@
 #define IDC_BTN_CHKCRLF2LF              1836
 #define IDC_BTN_OPENTENSORBOARD         1837
 #define IDC_BUTTON_APPLY_YAML           1838
+#define IDC_CHK_ONLY_WITH_LABEL         1839
+
 
 #define IDC_CHK_SPLIT_SHUFFLE           1849
 #define IDC_RADIO_SPLITUNIT_1           1850
