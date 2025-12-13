@@ -242,6 +242,31 @@ static uint64_t CountImagesLabels(const fs::path& root) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////
+// 
+// コンボ履歴クリア
+// 汎用的に使えるはず
+// 
+////////////////////////////////////////////////////////////////////////////////
+void ClearSrc(HWND hDlg, UINT _IDCCMB, const wchar_t* _SECSTR, UINT _IDCSTC)
+{
+    HWND hCombo = GetDlgItem(hDlg, _IDCCMB);
+
+    // 1) 履歴を消す（ini）
+    ClearMRUSection(_SECSTR);   // ←ここは、あなたが SaveMRU/LoadMRUToCombo に使っている「同じキー名」にする
+
+    // 2) UIも空にする
+    ClearComboUI(hCombo);
+
+    // 3) 念のため、今のini状態（空）でコンボを再ロードしたいなら
+    LoadMRUToCombo(hCombo, _SECSTR);  // なくてもOK（空のままなので）
+
+    // 4) カウンタ更新
+	if (_IDCSTC != 0)
+        UpdateFolderCounter(hDlg, _IDCCMB, _IDCSTC);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////
 // メインウィンドウへログ送信
 /////////////////////////////////////////////////////////////////////////////////
 static void LogToMain(const std::wstring& s) {
@@ -347,11 +372,17 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
             UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
             UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
 
+            INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
+            InitCommonControlsEx(&icc);
+            SetTootips(hDlg, _ToolTipMultiCpDlg);
+
             // （任意）先頭コンボにフォーカス
             if (HWND hFirst = GetDlgItem(hDlg, IDC_CMB_TRAIN_SRC[0])) {
                 SetFocus(hFirst);
                 return FALSE; // 自分でフォーカス設定したので FALSE
             }
+
+
             return TRUE;
         }
             
@@ -406,42 +437,79 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     }
                     return TRUE;
                 //各0~15まで
-                case IDC_BTN_TRAIN_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_0); break;
-                case IDC_BTN_TRAIN_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_1); break;
-                case IDC_BTN_TRAIN_BROWSE_2: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_2, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_2); break;
-                case IDC_BTN_TRAIN_BROWSE_3: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_3, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_3, IDC_STATIC_TRAIN_SRC_3); break;
-                case IDC_BTN_TRAIN_BROWSE_4: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_4, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_4, IDC_STATIC_TRAIN_SRC_4); break;
-                case IDC_BTN_TRAIN_BROWSE_5: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_5, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_5); break;
-                case IDC_BTN_TRAIN_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_6); break;
-                case IDC_BTN_TRAIN_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_7, IDC_STATIC_TRAIN_SRC_7); break;
-                case IDC_BTN_TRAIN_BROWSE_8: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_8, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_8, IDC_STATIC_TRAIN_SRC_8); break;
-				case IDC_BTN_TRAIN_BROWSE_9: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_9, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_9, IDC_STATIC_TRAIN_SRC_9); break;
-				case IDC_BTN_TRAIN_BROWSE_10: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_10, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_10, IDC_STATIC_TRAIN_SRC_10); break;
-				case IDC_BTN_TRAIN_BROWSE_11: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_11, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_11, IDC_STATIC_TRAIN_SRC_11); break;
-				case IDC_BTN_TRAIN_BROWSE_12: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_12, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_12, IDC_STATIC_TRAIN_SRC_12); break;
-				case IDC_BTN_TRAIN_BROWSE_13: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_13, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_13, IDC_STATIC_TRAIN_SRC_13); break;
-				case IDC_BTN_TRAIN_BROWSE_14: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_14, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_14, IDC_STATIC_TRAIN_SRC_14); break;
-				case IDC_BTN_TRAIN_BROWSE_15: PickFolderEx(hDlg, IDC_CMB_TRAIN_SRC_15, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_15, IDC_STATIC_TRAIN_SRC_15); break;
+                case IDC_BTN_TRAIN_BROWSE_0: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_0, L"Original Sorce Directory", L"Train Data 0"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_0, IDC_STATIC_TRAIN_SRC_0); break;
+				case IDC_BTN_TRAIN_BROWSE_1: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_1, L"Original Sorce Directory", L"Train Data 1"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_1, IDC_STATIC_TRAIN_SRC_1); break;
+				case IDC_BTN_TRAIN_BROWSE_2: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_2, L"Original Sorce Directory", L"Train Data 2"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_2, IDC_STATIC_TRAIN_SRC_2); break;
+				case IDC_BTN_TRAIN_BROWSE_3: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_3, L"Original Sorce Directory", L"Train Data 3"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_3, IDC_STATIC_TRAIN_SRC_3); break;
+				case IDC_BTN_TRAIN_BROWSE_4: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_4, L"Original Sorce Directory", L"Train Data 4"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_4, IDC_STATIC_TRAIN_SRC_4); break;
+				case IDC_BTN_TRAIN_BROWSE_5: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_5, L"Original Sorce Directory", L"Train Data 5"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_5, IDC_STATIC_TRAIN_SRC_5); break;
+				case IDC_BTN_TRAIN_BROWSE_6: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_6, L"Original Sorce Directory", L"Train Data 6"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_6, IDC_STATIC_TRAIN_SRC_6); break;
+				case IDC_BTN_TRAIN_BROWSE_7: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_7, L"Original Sorce Directory", L"Train Data 7"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_7, IDC_STATIC_TRAIN_SRC_7); break;
+				case IDC_BTN_TRAIN_BROWSE_8: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_8, L"Original Sorce Directory", L"Train Data 8"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_8, IDC_STATIC_TRAIN_SRC_8); break;
+				case IDC_BTN_TRAIN_BROWSE_9: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_9, L"Original Sorce Directory", L"Train Data 9"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_9, IDC_STATIC_TRAIN_SRC_9); break;
+				case IDC_BTN_TRAIN_BROWSE_10: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_10, L"Original Sorce Directory", L"Train Data 10"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_10, IDC_STATIC_TRAIN_SRC_10); break;
+				case IDC_BTN_TRAIN_BROWSE_11: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_11, L"Original Sorce Directory", L"Train Data 11"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_11, IDC_STATIC_TRAIN_SRC_11); break;
+				case IDC_BTN_TRAIN_BROWSE_12: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_12, L"Original Sorce Directory", L"Train Data 12"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_12, IDC_STATIC_TRAIN_SRC_12); break;
+				case IDC_BTN_TRAIN_BROWSE_13: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_13, L"Original Sorce Directory", L"Train Data 13"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_13, IDC_STATIC_TRAIN_SRC_13); break;
+				case IDC_BTN_TRAIN_BROWSE_14: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_14, L"Original Sorce Directory", L"Train Data 14"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_14, IDC_STATIC_TRAIN_SRC_14); break;
+				case IDC_BTN_TRAIN_BROWSE_15: PickFolderEx3(hDlg, IDC_CMB_TRAIN_SRC_15, L"Original Sorce Directory", L"Train Data 15"); UpdateFolderCounter(hDlg, IDC_CMB_TRAIN_SRC_15, IDC_STATIC_TRAIN_SRC_15); break;
+               
+				case IDC_BTN_VALID_BROWSE_0: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_0, L"Original Sorce Directory", L"Valid Data 0"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_0, IDC_STATIC_VALID_SRC_0); break;
+				case IDC_BTN_VALID_BROWSE_1: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_1, L"Original Sorce Directory", L"Valid Data 1"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_1, IDC_STATIC_VALID_SRC_1); break;
+				case IDC_BTN_VALID_BROWSE_2: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_2, L"Original Sorce Directory", L"Valid Data 2"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_2, IDC_STATIC_VALID_SRC_2); break;
+				case IDC_BTN_VALID_BROWSE_3: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_3, L"Original Sorce Directory", L"Valid Data 3"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_3, IDC_STATIC_VALID_SRC_3); break;
+				case IDC_BTN_VALID_BROWSE_4: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_4, L"Original Sorce Directory", L"Valid Data 4"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_4, IDC_STATIC_VALID_SRC_4); break;
+				case IDC_BTN_VALID_BROWSE_5: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_5, L"Original Sorce Directory", L"Valid Data 5"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_5, IDC_STATIC_VALID_SRC_5); break;
+				case IDC_BTN_VALID_BROWSE_6: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_6, L"Original Sorce Directory", L"Valid Data 6"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_6, IDC_STATIC_VALID_SRC_6); break;
+				case IDC_BTN_VALID_BROWSE_7: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_7, L"Original Sorce Directory", L"Valid Data 7"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_7, IDC_STATIC_VALID_SRC_7); break;
+				case IDC_BTN_VALID_BROWSE_8: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_8, L"Original Sorce Directory", L"Valid Data 8"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_8, IDC_STATIC_VALID_SRC_8); break;
+				case IDC_BTN_VALID_BROWSE_9: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_9, L"Original Sorce Directory", L"Valid Data 9"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_9, IDC_STATIC_VALID_SRC_9); break;
+				case IDC_BTN_VALID_BROWSE_10: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_10, L"Original Sorce Directory", L"Valid Data 10"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_10, IDC_STATIC_VALID_SRC_10); break;
+				case IDC_BTN_VALID_BROWSE_11: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_11, L"Original Sorce Directory", L"Valid Data 11"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_11, IDC_STATIC_VALID_SRC_11); break;
+				case IDC_BTN_VALID_BROWSE_12: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_12, L"Original Sorce Directory", L"Valid Data 12"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_12, IDC_STATIC_VALID_SRC_12); break;
+				case IDC_BTN_VALID_BROWSE_13: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_13, L"Original Sorce Directory", L"Valid Data 13"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_13, IDC_STATIC_VALID_SRC_13); break;
+				case IDC_BTN_VALID_BROWSE_14: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_14, L"Original Sorce Directory", L"Valid Data 14"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_14, IDC_STATIC_VALID_SRC_14); break;
+                case IDC_BTN_VALID_BROWSE_15: PickFolderEx3(hDlg, IDC_CMB_VALID_SRC_15, L"Original Sorce Directory", L"Valid Data 15"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_15, IDC_STATIC_VALID_SRC_15); break;
 
-                case IDC_BTN_VALID_BROWSE_0: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_0, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_0, IDC_STATIC_VALID_SRC_0); break;
-                case IDC_BTN_VALID_BROWSE_1: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_1, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_1, IDC_STATIC_VALID_SRC_1); break;
-                case IDC_BTN_VALID_BROWSE_2: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_2, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_2, IDC_STATIC_VALID_SRC_2); break;
-                case IDC_BTN_VALID_BROWSE_3: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_3, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_3, IDC_STATIC_VALID_SRC_3); break;
-                case IDC_BTN_VALID_BROWSE_4: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_4, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_4, IDC_STATIC_VALID_SRC_4); break;
-                case IDC_BTN_VALID_BROWSE_5: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_5, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_5, IDC_STATIC_VALID_SRC_5); break;
-                case IDC_BTN_VALID_BROWSE_6: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_6, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_6, IDC_STATIC_VALID_SRC_6); break;
-                case IDC_BTN_VALID_BROWSE_7: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_7, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_7, IDC_STATIC_VALID_SRC_7); break;
-				case IDC_BTN_VALID_BROWSE_8: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_8, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_8, IDC_STATIC_VALID_SRC_8); break;
-				case IDC_BTN_VALID_BROWSE_9: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_9, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_9, IDC_STATIC_VALID_SRC_9); break;
-				case IDC_BTN_VALID_BROWSE_10: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_10, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_10, IDC_STATIC_VALID_SRC_10); break;
-				case IDC_BTN_VALID_BROWSE_11: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_11, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_11, IDC_STATIC_VALID_SRC_11); break;
-				case IDC_BTN_VALID_BROWSE_12: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_12, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_12, IDC_STATIC_VALID_SRC_12); break;
-				case IDC_BTN_VALID_BROWSE_13: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_13, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_13, IDC_STATIC_VALID_SRC_13); break;
-				case IDC_BTN_VALID_BROWSE_14: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_14, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_14, IDC_STATIC_VALID_SRC_14); break;
-				case IDC_BTN_VALID_BROWSE_15: PickFolderEx(hDlg, IDC_CMB_VALID_SRC_15, L"Original Sorce Directory"); UpdateFolderCounter(hDlg, IDC_CMB_VALID_SRC_15, IDC_STATIC_VALID_SRC_15); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_0:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_0, L"Train Data 0", IDC_STATIC_TRAIN_SRC_0); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_1:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_1, L"Train Data 1", IDC_STATIC_TRAIN_SRC_1); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_2:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_2, L"Train Data 2", IDC_STATIC_TRAIN_SRC_2); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_3:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_3, L"Train Data 3", IDC_STATIC_TRAIN_SRC_3); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_4:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_4, L"Train Data 4", IDC_STATIC_TRAIN_SRC_4); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_5:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_5, L"Train Data 5", IDC_STATIC_TRAIN_SRC_5); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_6:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_6, L"Train Data 6", IDC_STATIC_TRAIN_SRC_6); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_7:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_7, L"Train Data 7", IDC_STATIC_TRAIN_SRC_7); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_8:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_8, L"Train Data 8", IDC_STATIC_TRAIN_SRC_8); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_9:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_9, L"Train Data 9", IDC_STATIC_TRAIN_SRC_9); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_10:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_10, L"Train Data 10", IDC_STATIC_TRAIN_SRC_10); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_11:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_11, L"Train Data 11", IDC_STATIC_TRAIN_SRC_11); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_12:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_12, L"Train Data 12", IDC_STATIC_TRAIN_SRC_12); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_13:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_13, L"Train Data 13", IDC_STATIC_TRAIN_SRC_13); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_14:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_14, L"Train Data 14", IDC_STATIC_TRAIN_SRC_14); break;
+				case IDC_BTN_TRAIN_SRC_CREAR_15:ClearSrc(hDlg, IDC_CMB_TRAIN_SRC_15, L"Train Data 15", IDC_STATIC_TRAIN_SRC_15);
+
+				case IDC_BTN_VALID_SRC_CREAR_0:ClearSrc(hDlg, IDC_CMB_VALID_SRC_0, L"Valid Data 0", IDC_STATIC_VALID_SRC_0); break;
+				case IDC_BTN_VALID_SRC_CREAR_1:ClearSrc(hDlg, IDC_CMB_VALID_SRC_1, L"Valid Data 1", IDC_STATIC_VALID_SRC_1); break;
+				case IDC_BTN_VALID_SRC_CREAR_2:ClearSrc(hDlg, IDC_CMB_VALID_SRC_2, L"Valid Data 2", IDC_STATIC_VALID_SRC_2); break;
+				case IDC_BTN_VALID_SRC_CREAR_3:ClearSrc(hDlg, IDC_CMB_VALID_SRC_3, L"Valid Data 3", IDC_STATIC_VALID_SRC_3); break;
+				case IDC_BTN_VALID_SRC_CREAR_4:ClearSrc(hDlg, IDC_CMB_VALID_SRC_4, L"Valid Data 4", IDC_STATIC_VALID_SRC_4); break;
+				case IDC_BTN_VALID_SRC_CREAR_5:ClearSrc(hDlg, IDC_CMB_VALID_SRC_5, L"Valid Data 5", IDC_STATIC_VALID_SRC_5); break;
+				case IDC_BTN_VALID_SRC_CREAR_6:ClearSrc(hDlg, IDC_CMB_VALID_SRC_6, L"Valid Data 6", IDC_STATIC_VALID_SRC_6); break;
+				case IDC_BTN_VALID_SRC_CREAR_7:ClearSrc(hDlg, IDC_CMB_VALID_SRC_7, L"Valid Data 7", IDC_STATIC_VALID_SRC_7); break;
+				case IDC_BTN_VALID_SRC_CREAR_8:ClearSrc(hDlg, IDC_CMB_VALID_SRC_8, L"Valid Data 8", IDC_STATIC_VALID_SRC_8); break;
+				case IDC_BTN_VALID_SRC_CREAR_9:ClearSrc(hDlg, IDC_CMB_VALID_SRC_9, L"Valid Data 9", IDC_STATIC_VALID_SRC_9); break;
+				case IDC_BTN_VALID_SRC_CREAR_10:ClearSrc(hDlg, IDC_CMB_VALID_SRC_10, L"Valid Data 10", IDC_STATIC_VALID_SRC_10); break;
+				case IDC_BTN_VALID_SRC_CREAR_11:ClearSrc(hDlg, IDC_CMB_VALID_SRC_11, L"Valid Data 11", IDC_STATIC_VALID_SRC_11); break;
+				case IDC_BTN_VALID_SRC_CREAR_12:ClearSrc(hDlg, IDC_CMB_VALID_SRC_12, L"Valid Data 12", IDC_STATIC_VALID_SRC_12); break;
+				case IDC_BTN_VALID_SRC_CREAR_13:ClearSrc(hDlg, IDC_CMB_VALID_SRC_13, L"Valid Data 13", IDC_STATIC_VALID_SRC_13); break;
+				case IDC_BTN_VALID_SRC_CREAR_14:ClearSrc(hDlg, IDC_CMB_VALID_SRC_14, L"Valid Data 14", IDC_STATIC_VALID_SRC_14); break;
+				case IDC_BTN_VALID_SRC_CREAR_15:ClearSrc(hDlg, IDC_CMB_VALID_SRC_15, L"Valid Data 15", IDC_STATIC_VALID_SRC_15);
+
+
+                break;
 
                 case IDC_BTN_BROWSE_TEMP_MCOPY: {
-                    PickFolderEx(hDlg, IDC_COMBO_TEMP_MCOPY, L"Tempolary Source Directory");
+                    PickFolderEx2(hDlg, IDC_COMBO_TEMP_MCOPY, L"Tempolary Source Directory");
 					//ここで親ウィンドウのTEMPも更新しておく
                     HWND hMain = GetParent(hDlg);
                     if (hMain) {

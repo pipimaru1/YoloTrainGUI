@@ -2,6 +2,7 @@
 
 #include "pch.h"
 #include "resource.h"
+#include "tooltip.hpp"
 
 // ------------------------------
 // Globals
@@ -13,6 +14,8 @@ extern std::mutex g_logMutex;
 extern std::wstring g_logBuffer;
 extern const wchar_t* RET;
 extern bool _IDC_CHK_LOG_CRLF2LF;// = false;
+extern std::mutex g_storeMutex;
+
 
 #define MAXDIR 16 // 最大ディレクトリ数（Train/Valid 各 8 行）
 extern const UINT IDC_CMB_TRAIN_SRC[MAXDIR];
@@ -24,6 +27,9 @@ extern const UINT IDC_CHK_VALID_EN[MAXDIR];
 extern const UINT IDC_STC_TRAIN_SRC[MAXDIR];
 extern const UINT IDC_STC_VALID_SRC[MAXDIR];
 
+extern Tooltip _ToolTipMainDlg; // グローバルなツールチップオブジェクト
+extern Tooltip _ToolTipMultiCpDlg; // グローバルなツールチップオブジェクト
+
 //
 void LogAppendANSI(const std::wstring& s);
 void AppendLog(const std::wstring& s);
@@ -31,6 +37,7 @@ void AppendLog(const std::wstring& s);
 // ------------------------------
 // Utilities
 // ------------------------------
+
 std::wstring GetText(HWND hDlg, int id);
 void SaveMRU(const std::wstring& section, const std::wstring& value, size_t maxItems = 256);
 void LoadMRUToCombo(HWND hCombo, const std::wstring& section);
@@ -48,9 +55,52 @@ void UpdateFolderCounter_Valid(HWND hDlg, const UINT ID_COMBO, const UINT ID_STA
 bool ExportMultiCopyListToCSV(HWND hDlg);
 bool ImportMultiCopyListFromCSV(HWND hDlg);
 
+bool PickFolderEx1(HWND owner, std::wstring& outPath, std::wstring initialDir, std::wstring _title);
+bool PickFolderEx2(HWND hDlg, UINT _ComboID, std::wstring _title);//上記関数のラッパー
+bool PickFolderEx3(HWND hDlg, UINT _ComboID, std::wstring _title, std::wstring _SECSTR);
+
+std::map<std::wstring, std::vector<std::wstring>> ReadIniColon();
+void WriteIniColon(const std::map<std::wstring, std::vector<std::wstring>>& data);
+void ClearMRUSection(const std::wstring& section); // MRU（履歴）を「セクションごと消す」関数を追加
+void ClearComboUI(HWND hCombo);                    // コンボボックスをクリアするユーティリティ 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// richieditboxの不具合対応
+// 原因はほぼ確実に「別スレッドから RichEdit に SendMessage している」ことです。
+// サイズ変更中（UIスレッドが WM_SIZE 等で占有）に、バックグラウンドの読取スレッドが 
+// AppendLog→LogAppendANSI→SendMessage(EM_...) を投げると、UI スレッドと相互に待ち合って“詰まり”、
+// 以降の追記が出なくなる（止まる／落ちる）ことがあります。
+// ※ よくある誤解ですが、Win32 コントロールは“作成したスレッド＝UIスレッド”以外から触ってはいけません。
+// ミューテックスはスレッドアフィニティ問題を解決しません。
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ログを UI スレッドに投げる
+// 文字列をヒープに積んで UI スレッドへ投げる
+void PostLogToUi(const std::wstring& s);
+fs::path GetStoreDir();
+fs::path GetIniFile();
+fs::path GetHistoryFile();
+
+std::wstring GetText(HWND hDlg, int id);
+void SetProgress(int v);
+void ResetProgress();
+
+void AppendCmdHistory(const std::wstring& cmd);
+void EnableControls(HWND hDlg, const int* ids, size_t n, BOOL enable);
+void Updated_UI(HWND hDlg);
+
+
+void CommitComboMRU(HWND hCombo, const std::wstring& section, const std::wstring& value);
+
+//void PickCommitComboMRU(HWND hDlg, HWND hCombo, const std::wstring& section, const std::wstring& value);// フォルダ選択ダイアログ表示ユーティリティ
+
 // ------------------------------
 // CopyMultiDlgのProc
 INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// ------------------------------
+// ツールチップ
+//void SetTootips(HWND hDlg);
+void SetTootips(HWND hDlg, Tooltip& ttTmpDir);
 
 
 // 例: YoloTrainGUI.h など共通で見える場所

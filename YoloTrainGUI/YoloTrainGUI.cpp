@@ -15,7 +15,7 @@
 #include "Tooltip.hpp"
 
 namespace fs = std::filesystem;
-static std::mutex g_storeMutex;
+std::mutex g_storeMutex;
  
 // ------------------------------
 // Globals
@@ -43,526 +43,8 @@ static void GetChildRectClient(HWND hParent, HWND hChild, RECT& rcOut)
     MapWindowPoints(nullptr, hParent, (POINT*)&rcOut, 2); // 画面座標→親のクライアント座標
 }
 
-// ツールチップ
-Tooltip ttTmpDir; // グローバルなツールチップオブジェクト
-
-static std::wstring strTipTempDir =
-L"TempDir\r\n"
-L"├─ source\r\n"
-L"│   ├─ images (from shared)\r\n"
-L"│   └─ labels (from shared)\r\n"
-L"├─ train\r\n"
-L"│   ├─ images\r\n"
-L"│   └─ labels\r\n"
-L"└─ valid\r\n"
-L"    ├─ images\r\n"
-L"    └─ labels\r\n"
-L"\r\n"
-L"元データは ./TempDir/source にコピーされます。\r\n"
-L"トレーニング用と検証用に分割されると、\r\n"
-L"./TempDir/train および./TempDir/valid にコピーされます。\r\n"
-L"【注意】yolov8はRAMディスク使えません!!【注意】\r\n";
-
-static std::wstring strTipDataYaml = 
-L"クラシフィケーション定義とデータフォルダを記載します。 \r\n"
-L"下記を参考に記述してください。絶対パスの方が安定します。\r\n"
-L"\r\n"
-L"train: C:/TempDir/train/images \r\n"
-L"val : C:/TempDir/valid/images \r\n";
-
-static std::wstring strTipTrainPy =
-L"train.pyを指定します。\r\n"
-L"通常はパスを入れずに train.py とだけ記述してください。\r\n";
-
-static std::wstring strTipPythonExe =
-L"python.exeを指定します。\r\n"
-L"通常はパスを入れずに Python.exe とだけ記述してください。\r\n";
-
-static std::wstring strTipWorkDir =
-L"Yolovの作業ディレクトリを指定します。\r\n"
-L"train.pyのあるディレクトリを指定してください。\r\n"
-L"./yolov5や./yolov8, ./yolo11 等を指定します。\r\n";
-
-static std::wstring strGitSafe =
-L"Yolo作業ディレクトリに必要なファイルを\r\n"
-L"gitでダウンロードすることがあります\r\n"
-L"このボタンを押して、gitsafe に指定してください。\r\n";
-
-static std::wstring strChkEnv =
-L"Pythonの環境設定のリストを表示します。\r\n"
-L"Condaに対応しています。\r\n";
-
-static std::wstring strTipCfgYaml =
-L"不要な時は空欄にしてください。\r\n"
-L"ptファイルがあれば不要です。\r\n";
-
-static std::wstring strTipAutoEditYamlBtn =
-L"Tempフォルダをdata.yamlに適用します。\r\n";
-
-
-void SetTootips(HWND hDlg)
-{
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"YOLO GUI", strTipTempDir.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DATA_YAML, L"YOLO GUI", strTipDataYaml.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_EDIT_YAML, L"YOLO GUI", strTipDataYaml.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"YOLO GUI", strTipTrainPy.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PYTHONEXE, L"YOLO GUI", strTipPythonExe.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WORKDIR, L"YOLO GUI", strTipWorkDir.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SAFE_DIR, L"YOLO GUI", strGitSafe.c_str());   
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_PYENV, L"YOLO GUI", strChkEnv.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_CFGYAML, L"CFG Yaml", strTipCfgYaml.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BUTTON_APPLY_YAML, L"YOLO GUI", strTipAutoEditYamlBtn.c_str());
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_ONLY_WITH_LABEL, 
-        L"YOLO GUI", 
-        std::wstring(L"ラベルファイルのあるデータのみコピーします。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_GRP_YOLOVERSION,
-        L"YOLO GUI",
-        std::wstring(L"Yoloのバージョンを指定します。\r\n対応はyolov5、yolov8、yolo11です。\r\nyolov8とyolo11のラーニング環境は同じです。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RAD_YOLOV5,
-        L"YOLO GUI",
-        std::wstring(L"Yoloのバージョンを指定します。\r\n対応はyolov5、yolov8、yolo11です。\r\nyolov8とyolo11のラーニング環境は同じです。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RAD_YOLOV8,
-        L"YOLO GUI",
-        std::wstring(L"Yoloのバージョンを指定します。\r\n対応はyolov5、yolov8、yolo11です。\r\nyolov8とyolo11のラーニング環境は同じです。").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_USEPROXY,
-        L"YOLO GUI",
-        std::wstring(L"プロキシ環境の時はチェックしてください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PROXY_HTTP,
-        L"YOLO GUI",
-        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PROXY_HTTPS,
-        L"YOLO GUI",
-        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_PROXY_HTTP,
-        L"YOLO GUI",
-        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_PROXY_HTTPS,
-        L"YOLO GUI",
-        std::wstring(L"プロキシ環境の時は指定してください。\r\n自動的に必要ファイルをダウンロードすることがあります。").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_IMG,
-        L"YOLO GUI",
-        std::wstring(L"[ソース]イメージファイルのあるフォルダを指定").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_LABEL,
-        L"YOLO GUI",
-        std::wstring(L"[ソース]ラベルファイルのあるフォルダを指定").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_TEMP,
-        L"YOLO GUI",
-        std::wstring(L"テンポラリフォルダを指定してください。ソースからこのフォルダにコピーします。\r\n"
-            L"【注意】CLR Tempで、このフォルダは丸ごと消されます。専用のフォルダを作成して指定するようにしてください。"
-        ).c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_OPEN_COPY_MULTI,
-        L"YOLO GUI",
-        std::wstring(L"フォルダ毎にTrainとValidを指定する場合はこのボタンを押してください。").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_CLEARTMP,
-        L"YOLO GUI",
-        std::wstring(L"テンポラリフォルダを消去します。【注意】フォルダごと消します。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_COPY,
-        L"YOLO GUI",
-        std::wstring(L"ソースからテンポラリへコピーを開始します。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_ONLY_WITH_LABEL,
-        L"YOLO GUI",
-        std::wstring(L"ラベルファイルのあるペアのみコピーします。").c_str()
-    );
-
-    static std::wstring strIDC_RADIO_SPLITUNIT =
-        L"TrainとValidに分割するときの、連続するファイル数単位を指定します。\n\r"
-        L"連続する似た画像がTrainとValid両方に入ることを抑制します。"
-        L"汎化性能の向上の可能性があります。";
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_1,   L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
-	ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_5,   L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
-	ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_10,  L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_20,  L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_50,  L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_RADIO_SPLITUNIT_100, L"YOLO GUI", strIDC_RADIO_SPLITUNIT.c_str());
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_SPLIT,
-        L"YOLO GUI",
-        std::wstring(L"テンポラリフォルダのデータセットをTrainとValidに分割します。\r\n"
-        L"分割したデータは別のフォルダにコピーされます。").c_str()
-    );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_TRAINPCT,
-        L"YOLO GUI",
-        std::wstring(L"Trainに割り当てるデータの割合を%で指定してください。\r\n"
-         L"ふつうは80です。").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_REDUCTION,
-        L"YOLO GUI",
-        std::wstring(L"使うデータの割合を係数で指定してください。\r\n"
-            L"分からなければ1.0を指定してください。\r\n"
-            L"大きなデータセットのテストなどでデータを減らしたいときに使います。").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_SPLIT_SHUFFLE,
-        L"YOLO GUI",
-        std::wstring(L"データを分割するときランダムな順番にしてから分割します。\r\n"
-            L"毎回結果が変わります。\r\n"
-            L"デフォルトでは規則な順番で分割します。").c_str()
-    );
-
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// richieditboxの不具合対応
-// 原因はほぼ確実に「別スレッドから RichEdit に SendMessage している」ことです。
-// サイズ変更中（UIスレッドが WM_SIZE 等で占有）に、バックグラウンドの読取スレッドが 
-// AppendLog→LogAppendANSI→SendMessage(EM_...) を投げると、UI スレッドと相互に待ち合って“詰まり”、
-// 以降の追記が出なくなる（止まる／落ちる）ことがあります。
-// ※ よくある誤解ですが、Win32 コントロールは“作成したスレッド＝UIスレッド”以外から触ってはいけません。
-// ミューテックスはスレッドアフィニティ問題を解決しません。
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ログを UI スレッドに投げる
-// 文字列をヒープに積んで UI スレッドへ投げる
-static void PostLogToUi(const std::wstring& s) {
-    if (!g_hDlg || s.empty()) return;
-    auto* payload = new std::wstring(s);        // 後で UI スレッドが delete
-    PostMessageW(g_hDlg, WM_APP_LOGAPPEND, 0, reinterpret_cast<LPARAM>(payload));
-}
 
 // ------------------------------
-// 文字コード変換＆保存先パスユーティリティ
-// ------------------------------
-
-//static 
-std::string ToUTF8(const std::wstring& w) {
-    if (w.empty()) return {};
-    int len = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
-    std::string s(len, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), s.data(), len, nullptr, nullptr);
-    return s;
-}
-//static 
-std::wstring FromUTF8(const std::string& s) {
-    if (s.empty()) return {};
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
-    std::wstring w(len, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), w.data(), len);
-    return w;
-}
-static fs::path GetStoreDir() {
-    PWSTR p = nullptr;
-    SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, &p);
-    fs::path dir = fs::path(p) / L"YoloV5Trainer";
-    CoTaskMemFree(p);
-    std::error_code ec; fs::create_directories(dir, ec);
-    return dir;
-}
-static fs::path GetIniFile() 
-{ 
-    //return GetStoreDir() / L"mru_history.ini"; 
-
-    return L"mru_history.ini";
-}
-static fs::path GetHistoryFile() 
-{ 
-    //return GetStoreDir() / L"history.txt"; 
-
-    return  L"history.txt";
-}
-
-// ------------------------------
-// INI（コロン区切り）簡易パーサ
-// data[section] = {value0, value1, ...}
-// ------------------------------
-static std::map<std::wstring, std::vector<std::wstring>> ReadIniColon()
-{
-    std::map<std::wstring, std::vector<std::wstring>> data;
-    std::lock_guard<std::mutex> lk(g_storeMutex);
-    fs::path ini = GetIniFile();
-    if (!fs::exists(ini)) return data;
-
-    std::ifstream ifs(ini, std::ios::binary);
-    if (!ifs) return data;
-    std::string bytes((std::istreambuf_iterator<char>(ifs)), {});
-    // strip UTF-8 BOM if present
-    if (bytes.size() >= 3 && (unsigned char)bytes[0] == 0xEF && (unsigned char)bytes[1] == 0xBB && (unsigned char)bytes[2] == 0xBF) {
-        bytes.erase(0, 3);
-    }
-    std::wstring text = FromUTF8(bytes);
-
-    std::wstring cur;
-    size_t pos = 0;
-    while (pos < text.size()) {
-        size_t eol = text.find_first_of(L"\r\n", pos);
-        std::wstring line = text.substr(pos, (eol == std::wstring::npos ? text.size() - pos : eol - pos));
-        if (eol != std::wstring::npos) {
-            if (text[eol] == L'\r' && eol + 1 < text.size() && text[eol + 1] == L'\n') eol++;
-            pos = eol + 1;
-        }
-        else pos = text.size();
-
-        // trim
-        auto ltrim = [&](std::wstring& s) { s.erase(0, s.find_first_not_of(L" \t")); };
-        auto rtrim = [&](std::wstring& s) { size_t k = s.find_last_not_of(L" \t"); if (k == std::wstring::npos) s.clear(); else s.erase(k + 1); };
-        ltrim(line); rtrim(line);
-        if (line.empty() || line[0] == L';' || line[0] == L'#') continue;
-
-        if (line.size() > 2 && line.front() == L'[' && line.back() == L']') {
-            cur = line.substr(1, line.size() - 2);
-            continue;
-        }
-        if (cur.empty()) continue;
-        // "index:value"
-        size_t colon = line.find(L':');
-        if (colon == std::wstring::npos) continue;
-        std::wstring value = line.substr(colon + 1);
-        ltrim(value); rtrim(value);
-        if (!value.empty()) data[cur].push_back(value);
-    }
-    return data;
-}
-static void WriteIniColon(const std::map<std::wstring, std::vector<std::wstring>>& data)
-{
-    std::lock_guard<std::mutex> lk(g_storeMutex);
-    std::wstring out;
-    for (auto& kv : data) {
-        out += L"[" + kv.first + L"]\r\n";
-        const auto& vec = kv.second;
-        size_t n = vec.size();
-        for (size_t i = 0; i < n; i++) {
-            out += std::to_wstring(i) + L":" + vec[i] + L"\r\n";
-        }
-        out += L"\r\n";
-    }
-    std::ofstream ofs(GetIniFile(), std::ios::binary | std::ios::trunc);
-
-    std::string u8 = ToUTF8(out);
-    ofs.write(u8.data(), (std::streamsize)u8.size());
-}
-
-// ------------------------------
-// Utilities
-// ------------------------------
-
-std::wstring GetText(HWND hDlg, int id)
-{
-    wchar_t tmp[4096];
-    GetDlgItemTextW(hDlg, id, tmp, 4096);
-    return tmp;
-}
-
-static void SetProgress(int v)
-{
-    SendDlgItemMessageW(g_hDlg, IDC_PROGRESS, PBM_SETPOS, (WPARAM)v, 0);
-}
-static void ResetProgress()
-{
-    SendDlgItemMessageW(g_hDlg, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
-    SetProgress(0);
-}
-
-//static 
-std::vector<std::wstring> LoadMRU(const std::wstring& section)
-{
-    auto m = ReadIniColon();
-    auto it = m.find(section);
-    if (it == m.end()) return {};
-    return it->second;
-}
-
-//static 
-void SaveMRU(const std::wstring& section, const std::wstring& value, size_t maxItems)
-{
-    if (value.empty()) return;
-    auto m = ReadIniColon();
-    auto& v = m[section];
-    // 前方重複排除
-    v.erase(std::remove(v.begin(), v.end(), value), v.end());
-    v.insert(v.begin(), value);
-    if (v.size() > maxItems) v.resize(maxItems);
-    WriteIniColon(m);
-}
-
-//static 
-void LoadMRUToCombo(HWND hCombo, const std::wstring& section)
-{
-    SendMessageW(hCombo, CB_RESETCONTENT, 0, 0);
-    for (auto& s : LoadMRU(section)) {
-        SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)s.c_str());
-    }
-}
-
-static void LoadMRUToTextControl(HWND hEditText, const std::wstring& section)
-{
-    SendMessageW(hEditText, WM_SETTEXT, 0, (LPARAM)L"");
-    auto v = LoadMRU(section);
-    if (!v.empty()) {
-        std::wstring s = v.front(); // 先頭要素を採用
-        SendMessageW(hEditText, WM_SETTEXT, 0, (LPARAM)s.c_str());
-    }
-}
-
-//単純に文字列を
-//std::wstring LoadMRUToString(HWND hEditText, const std::wstring& section)
-std::wstring LoadMRUToString(const std::wstring& section)
-{
-	std::wstring s = L"";
-    auto v = LoadMRU(section);
-    if (!v.empty()) 
-    {
-        std::wstring s = v.front(); // 先頭要素を採用
-        return s;
-    }
-    return s;
-}
-
-// --- Flags loader for simple 0/1 states in mru_history.ini ---
-//static 
-bool LoadFlagFromIni(const wchar_t* key, bool def)// = false)
-{
-    auto v = LoadMRU(key);               // section=key の先頭要素を採用（"1" or "0"想定）
-    if (v.empty()) return def;
-    const std::wstring& s = v.front();
-    if (s == L"1") return true;
-    if (s == L"0") return false;
-    // 念のため true 系テキストも許容
-    if (_wcsicmp(s.c_str(), L"true") == 0 || _wcsicmp(s.c_str(), L"on") == 0) return true;
-    return def;
-}
-
-
-// ------------------------------
-// Command history
-// ------------------------------
-static void AppendCmdHistory(const std::wstring& cmd)
-{
-    SYSTEMTIME st; GetLocalTime(&st);
-    wchar_t ts[64];
-    wsprintfW(ts, L"%04u-%02u-%02u %02u:%02u:%02u  ",
-        st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-
-    std::wstring line = std::wstring(ts) + cmd + L"\r\n";
-    std::string  u8 = ToUTF8(line);
-
-    std::lock_guard<std::mutex> lk(g_storeMutex);
-    std::ofstream ofs(GetHistoryFile(), std::ios::binary | std::ios::app);
-    ofs.write(u8.data(), (std::streamsize)u8.size());
-}
-
-// ------------------------------
-// radioボタンヘルパー
-// ------------------------------
-// 指定ID群の Enable/Disable をまとめて行うユーティリティ
-static void EnableControls(HWND hDlg, const int* ids, size_t n, BOOL enable)
-{
-    for (size_t i = 0; i < n; ++i) {
-        if (HWND h = GetDlgItem(hDlg, ids[i])) {
-            EnableWindow(h, enable);
-        }
-    }
-}
-
-// v5専用UIの有効/無効を切替（今回グレーアウト対象の6コントロール）
-//static void SetV5OnlyControlsEnabled(HWND hDlg, BOOL enable)
-//{
-//    const int ids[] = {
-//        IDC_STC_TRAINPY,
-//        IDC_COMBO_TRAINPY,
-//        IDC_STC_CFG,        // 新規追加ラベル
-//        IDC_COMBO_CFG,
-//        IDC_STC_PYTHONEXE,
-//        IDC_COMBO_PYTHON,
-//        IDC_BTN_BROWSE_TRAINPY,
-//        IDC_BTN_BROWSE_CFG,
-//        IDC_BTN_BROWSE_PYTHON,
-//        IDC_BTN_EDIT_YAML,
-//        IDC_BTN_EDIT_CFG
-//    };
-//    EnableControls(hDlg, ids, _countof(ids), enable);
-//}
-
-// ラジオ選択に応じてUIを更新
-static void Updated_UI(HWND hDlg)
-{
-	// YoloV5/V8/V11 のラジオボタンの状態に応じてUIを更新
-    const BOOL isV5 = (IsDlgButtonChecked(hDlg, IDC_RAD_YOLOV5) == BST_CHECKED);
-    const int ids[] = {
-    IDC_STC_TRAINPY,
-    IDC_COMBO_TRAINPY,
-    IDC_STC_CFG,        // 新規追加ラベル
-    IDC_COMBO_CFG,
-    IDC_STC_PYTHONEXE,
-    IDC_COMBO_PYTHON,
-    IDC_BTN_BROWSE_TRAINPY,
-    IDC_BTN_BROWSE_CFG,
-    IDC_BTN_BROWSE_PYTHON,
-    //IDC_BTN_EDIT_YAML,
-    IDC_BTN_EDIT_CFG
-    };
-    //コントロールの有効/無効をまとめて切り替える
-    EnableControls(hDlg, ids, _countof(ids), isV5);
-
-	// Proxy UI 更新
-    bool chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
-    const int ids_proxy[] = {
-    IDC_STC_PROXY_HTTP,
-    IDC_STC_PROXY_HTTPS,
-    IDC_CMB_PROXY_HTTP,
-    IDC_CMB_PROXY_HTTPS
-    };
-    EnableControls(hDlg, ids_proxy, _countof(ids_proxy), chkUseProxy);
-
-	// Hyperparameter tuning UI 更新
-    const BOOL isUseHyp = (IsDlgButtonChecked(hDlg, IDC_CHK_USEHYPERPARAM) == BST_CHECKED);
-    const int ids_hyp[] = {
-        IDC_COMBO_HYP,
-        IDC_BTN_BROWSE_HYP,
-        IDC_BTN_EDIT_HYP
-    };
-    EnableControls(hDlg, ids_hyp, _countof(ids_hyp), isUseHyp);
-
-	// Resume UI 更新
-    const BOOL isResume = (IsDlgButtonChecked(hDlg, IDC_CHECK_RESUME) == BST_CHECKED);
-    const int ids_resume[] = {
-        IDC_CMB_RESUME,
-        IDC_BTN_RESUME_BROWSE
-    };
-	EnableControls(hDlg, ids_resume, _countof(ids_resume), isResume);
-
-    const BOOL isOptionStr = (IsDlgButtonChecked(hDlg, IDC_CHK_OPTION_STR) == BST_CHECKED);
-    const int ids_optionstr[] = {
-        IDC_COMBO_OPTION_STR
-	};
-	EnableControls(hDlg, ids_optionstr, _countof(ids_optionstr), isOptionStr);
-
-
-    const BOOL isOptionShuffle = !(IsDlgButtonChecked(hDlg, IDC_CHK_SPLIT_SHUFFLE) == BST_CHECKED);
-    const int ids_optionsfl[] = {
-        IDC_RADIO_SPLITUNIT_1,
-        IDC_RADIO_SPLITUNIT_5,
-        IDC_RADIO_SPLITUNIT_10,
-        IDC_RADIO_SPLITUNIT_20,
-        IDC_RADIO_SPLITUNIT_50,
-        IDC_RADIO_SPLITUNIT_100
-    };
-    EnableControls(hDlg, ids_optionsfl, _countof(ids_optionsfl), isOptionShuffle);
-
-}
-
-// ------------------------------
-
 ///////////////////////////////////////////////////////////////////////////
 //
 // コピーする関数本体
@@ -610,14 +92,6 @@ static bool CopyTreeWithProgress(const fs::path& src, const fs::path& dst)
 // Copy dir -> dir with progress
 // 
 ///////////////////////////////////////////////////////////////////////////
-
-// 追加: ヘッダ
-//#include <omp.h>
-
-//// UIスレッドに進捗(%)を投げるユーザーメッセージ
-//#ifndef WM_APP_PROGRESS
-//#define WM_APP_PROGRESS (WM_APP + 100)
-//#endif
 
 // 進捗通知（並列スレッドから呼ぶ）
 static inline void NotifyProgressPercent(int v) {
@@ -1036,6 +510,133 @@ void DoClearTemp(HWND hOwner,const UINT _ID_COMBO_TEMP, bool confirm, bool keepR
     g_clearTempRunning = false;
 }
 
+// ------------------------------
+// INI（コロン区切り）簡易パーサ
+// data[section] = {value0, value1, ...}
+// ------------------------------
+
+//std::map<std::wstring, std::vector<std::wstring>> ReadIniColon()
+//{
+//    std::map<std::wstring, std::vector<std::wstring>> data;
+//    std::lock_guard<std::mutex> lk(g_storeMutex);
+//    fs::path ini = GetIniFile();
+//    if (!fs::exists(ini)) return data;
+//
+//    std::ifstream ifs(ini, std::ios::binary);
+//    if (!ifs) return data;
+//    std::string bytes((std::istreambuf_iterator<char>(ifs)), {});
+//    // strip UTF-8 BOM if present
+//    if (bytes.size() >= 3 && (unsigned char)bytes[0] == 0xEF && (unsigned char)bytes[1] == 0xBB && (unsigned char)bytes[2] == 0xBF) {
+//        bytes.erase(0, 3);
+//    }
+//    std::wstring text = FromUTF8(bytes);
+//
+//    std::wstring cur;
+//    size_t pos = 0;
+//    while (pos < text.size()) {
+//        size_t eol = text.find_first_of(L"\r\n", pos);
+//        std::wstring line = text.substr(pos, (eol == std::wstring::npos ? text.size() - pos : eol - pos));
+//        if (eol != std::wstring::npos) {
+//            if (text[eol] == L'\r' && eol + 1 < text.size() && text[eol + 1] == L'\n') eol++;
+//            pos = eol + 1;
+//        }
+//        else pos = text.size();
+//
+//        // trim
+//        auto ltrim = [&](std::wstring& s) { s.erase(0, s.find_first_not_of(L" \t")); };
+//        auto rtrim = [&](std::wstring& s) { size_t k = s.find_last_not_of(L" \t"); if (k == std::wstring::npos) s.clear(); else s.erase(k + 1); };
+//        ltrim(line); rtrim(line);
+//        if (line.empty() || line[0] == L';' || line[0] == L'#') continue;
+//
+//        if (line.size() > 2 && line.front() == L'[' && line.back() == L']') {
+//            cur = line.substr(1, line.size() - 2);
+//            continue;
+//        }
+//        if (cur.empty()) continue;
+//        // "index:value"
+//        size_t colon = line.find(L':');
+//        if (colon == std::wstring::npos) continue;
+//        std::wstring value = line.substr(colon + 1);
+//        ltrim(value); rtrim(value);
+//        if (!value.empty()) data[cur].push_back(value);
+//    }
+//    return data;
+//}
+//void WriteIniColon(const std::map<std::wstring, std::vector<std::wstring>>& data)
+//{
+//    std::lock_guard<std::mutex> lk(g_storeMutex);
+//    std::wstring out;
+//    for (auto& kv : data) {
+//        out += L"[" + kv.first + L"]\r\n";
+//        const auto& vec = kv.second;
+//        size_t n = vec.size();
+//        for (size_t i = 0; i < n; i++) {
+//            out += std::to_wstring(i) + L":" + vec[i] + L"\r\n";
+//        }
+//        out += L"\r\n";
+//    }
+//    std::ofstream ofs(GetIniFile(), std::ios::binary | std::ios::trunc);
+//
+//    std::string u8 = ToUTF8(out);
+//    ofs.write(u8.data(), (std::streamsize)u8.size());
+//}
+
+// ------------------------------
+// ComboBox helpers
+// ------------------------------
+
+// コンボボックスのテキストを取得・設定する
+std::wstring GetComboText(HWND hCombo)
+{
+    int len = (int)SendMessageW(hCombo, WM_GETTEXTLENGTH, 0, 0);
+    std::wstring s(len, L'\0');
+    SendMessageW(hCombo, WM_GETTEXT, len + 1, (LPARAM)s.data());
+    return s;
+}
+void SetComboText(HWND hCombo, const std::wstring& s)
+{
+    SendMessageW(hCombo, WM_SETTEXT, 0, (LPARAM)s.c_str());
+}
+
+// Count files recursively
+uint64_t CountFiles(const fs::path& root)
+{
+    uint64_t cnt = 0;
+    if (!fs::exists(root)) return 0;
+    for (auto& p : fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
+        if (p.is_regular_file()) cnt++;
+    }
+    return cnt;
+}
+bool EnsureDir(const fs::path& p)
+{
+    std::error_code ec;
+    if (fs::exists(p, ec)) return true;
+    return fs::create_directories(p, ec);
+}
+
+// MRU（履歴）を「セクションごと消す」関数を追加
+//void ClearMRUSection(const std::wstring& section)
+//{
+//    auto m = ReadIniColon();
+//    auto it = m.find(section);
+//    if (it == m.end()) return;
+//    m.erase(it);
+//    WriteIniColon(m);
+//}
+
+// コンボボックスをクリアするユーティリティ 
+void ClearComboUI(HWND hCombo)
+{
+    if (!hCombo) return;
+
+    SendMessageW(hCombo, CB_RESETCONTENT, 0, 0);           // ドロップダウンの候補を全消去
+    SendMessageW(hCombo, CB_SETCURSEL, (WPARAM)-1, 0);     // 選択解除
+    SetWindowTextW(hCombo, L"");                           // 編集欄を空にする（CBS_DROPDOWNで重要）
+    SendMessageW(hCombo, CB_SETEDITSEL, 0, 0);             // キャレット選択解除（見た目整え）
+}
+
+
 /////////////////////////////////////////////////////////////
 // 
 // トレーニング実行
@@ -1205,6 +806,9 @@ void TrainParams::DoTrain()
     }
     else
     {
+        // TensorBoard 自動起動設定（YOLOv8/11のみ有効）
+        ss << L"yolo settings tensorboard = True" << L" && ";
+
         // --- YOLOv8 / YOLO11：Ultralytics CLI を使用 ---
         // model は UI の「weights」欄を流用（yolov8n.pt / yolo11n.pt / 任意パス）
         if (weights.empty()) {
@@ -1934,7 +1538,7 @@ static void InitDialog(HWND hDlg)
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
     InitCommonControlsEx(&icc);
-    SetTootips(hDlg);
+    SetTootips(hDlg, _ToolTipMainDlg);
 
     //サイズ変更対応
     RECT rcCli{}; GetClientRect(hDlg, &rcCli);
@@ -2186,19 +1790,19 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 }
 
                 case IDC_BTN_BROWSE_IMG: 
-					PickFolderEx(hDlg, IDC_COMBO_IMG, L"Original IMAGE Directory");
+					PickFolderEx2(hDlg, IDC_COMBO_IMG, L"Original IMAGE Directory");
                 break;
                 case IDC_BTN_BROWSE_LABEL: {
                     //std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_LABEL), p); }
-					PickFolderEx(hDlg, IDC_COMBO_LABEL, L"Original LABEL Directory");
+					PickFolderEx2(hDlg, IDC_COMBO_LABEL, L"Original LABEL Directory");
                 } break;
                 case IDC_BTN_BROWSE_TEMP: {
                     //std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_TEMP), p); }
-                    PickFolderEx(hDlg, IDC_COMBO_TEMP, L"Tempolary Source Directory");
+                    PickFolderEx2(hDlg, IDC_COMBO_TEMP, L"Tempolary Source Directory");
                 } break;
                 case IDC_BTN_BROWSE_WORKDIR: {
                     //std::wstring p; if (PickFolder(hDlg, p)) { SetComboText(GetDlgItem(hDlg, IDC_COMBO_WORKDIR), p); }
-                    PickFolderEx(hDlg, IDC_COMBO_WORKDIR);
+                    PickFolderEx2(hDlg, IDC_COMBO_WORKDIR, L"Working Directory");
                 } break;
                 case IDC_BTN_BROWSE_TRAINPY:{
                     COMDLG_FILTERSPEC spec[] = { {L"Python (*.py)", L"*.py"} };

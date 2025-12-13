@@ -167,6 +167,7 @@ call $(SolutionDir)\update.bat</Command>
     <ClCompile Include="YoloTrainGuiTools.cpp" />
     <ClCompile Include="YoloTrainGUI_mcopy_dbox.cpp" />
     <ClCompile Include="splitfiles.cpp" />
+    <ClCompile Include="YoloTrainTTips.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="YoloTrainGUI.rc" />

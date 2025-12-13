@@ -62,6 +62,9 @@
     <ClCompile Include="splitfiles.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="YoloTrainTTips.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="YoloTrainGUI.rc">

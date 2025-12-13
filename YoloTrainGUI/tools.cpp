@@ -4,38 +4,72 @@
 #include "tools.hpp"
 
 // ------------------------------
+// 文字コード変換＆保存先パスユーティリティ
+// ------------------------------
+
+//static 
+std::string ToUTF8(const std::wstring& w) {
+    if (w.empty()) return {};
+    int len = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+    std::string s(len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), s.data(), len, nullptr, nullptr);
+    return s;
+}
+//static 
+std::wstring FromUTF8(const std::string& s) {
+    if (s.empty()) return {};
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+    std::wstring w(len, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), w.data(), len);
+    return w;
+}
+
+// ------------------------------
 // ComboBox helpers
 // ------------------------------
 
 // コンボボックスのテキストを取得・設定する
-std::wstring GetComboText(HWND hCombo)
-{
-    int len = (int)SendMessageW(hCombo, WM_GETTEXTLENGTH, 0, 0);
-    std::wstring s(len, L'\0');
-    SendMessageW(hCombo, WM_GETTEXT, len + 1, (LPARAM)s.data());
-    return s;
-}
-void SetComboText(HWND hCombo, const std::wstring& s)
-{
-    SendMessageW(hCombo, WM_SETTEXT, 0, (LPARAM)s.c_str());
-}
+//std::wstring GetComboText(HWND hCombo)
+//{
+//    int len = (int)SendMessageW(hCombo, WM_GETTEXTLENGTH, 0, 0);
+//    std::wstring s(len, L'\0');
+//    SendMessageW(hCombo, WM_GETTEXT, len + 1, (LPARAM)s.data());
+//    return s;
+//}
+//void SetComboText(HWND hCombo, const std::wstring& s)
+//{
+//    SendMessageW(hCombo, WM_SETTEXT, 0, (LPARAM)s.c_str());
+//}
 
 // Count files recursively
-uint64_t CountFiles(const fs::path& root)
-{
-    uint64_t cnt = 0;
-    if (!fs::exists(root)) return 0;
-    for (auto& p : fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
-        if (p.is_regular_file()) cnt++;
-    }
-    return cnt;
-}
-bool EnsureDir(const fs::path& p)
-{
-    std::error_code ec;
-    if (fs::exists(p, ec)) return true;
-    return fs::create_directories(p, ec);
-}
+//uint64_t CountFiles(const fs::path& root)
+//{
+//    uint64_t cnt = 0;
+//    if (!fs::exists(root)) return 0;
+//    for (auto& p : fs::recursive_directory_iterator(root, fs::directory_options::skip_permission_denied)) {
+//        if (p.is_regular_file()) cnt++;
+//    }
+//    return cnt;
+//}
+//bool EnsureDir(const fs::path& p)
+//{
+//    std::error_code ec;
+//    if (fs::exists(p, ec)) return true;
+//    return fs::create_directories(p, ec);
+//}
+
+
+// コンボボックスをクリアするユーティリティ 
+//void ClearComboUI(HWND hCombo)
+//{
+//    if (!hCombo) return;
+//
+//    SendMessageW(hCombo, CB_RESETCONTENT, 0, 0);           // ドロップダウンの候補を全消去
+//    SendMessageW(hCombo, CB_SETCURSEL, (WPARAM)-1, 0);     // 選択解除
+//    SetWindowTextW(hCombo, L"");                           // 編集欄を空にする（CBS_DROPDOWNで重要）
+//    SendMessageW(hCombo, CB_SETEDITSEL, 0, 0);             // キャレット選択解除（見た目整え）
+//}
+
 
 // ------------------------------
 // IFileDialog helpers
