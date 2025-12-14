@@ -148,7 +148,6 @@ call $(SolutionDir)\update.bat</Command>
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="resource_user.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="tools.hpp" />
     <ClInclude Include="YoloTrainGUI.h" />

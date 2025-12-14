@@ -67,6 +67,12 @@ L"Tempフォルダをdata.yamlに適用します。\r\n";
 void SetTootips(HWND hDlg, Tooltip& ttTmpDir)
 {
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TEMP, L"YOLO GUI", strTipTempDir.c_str());
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_FOLDER_IMAGE, L"YOLO GUI", strTipTempDir.c_str());
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_FOLDER_LABEL, L"YOLO GUI", strTipTempDir.c_str());
+
+
+
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DATA_YAML, L"YOLO GUI", strTipDataYaml.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_EDIT_YAML, L"YOLO GUI", strTipDataYaml.c_str());
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPY, L"YOLO GUI", strTipTrainPy.c_str());
@@ -167,18 +173,10 @@ void SetTootips(HWND hDlg, Tooltip& ttTmpDir)
         std::wstring(L"テンポラリフォルダのデータセットをTrainとValidに分割します。\r\n"
             L"分割したデータは別のフォルダにコピーされます。").c_str()
     );
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_TRAINPCT,
-        L"YOLO GUI",
-        std::wstring(L"Trainに割り当てるデータの割合を%で指定してください。\r\n"
-            L"ふつうは80です。").c_str()
-    );
-
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_REDUCTION,
-        L"YOLO GUI",
-        std::wstring(L"使うデータの割合を係数で指定してください。\r\n"
-            L"分からなければ1.0を指定してください。\r\n"
-            L"大きなデータセットのテストなどでデータを減らしたいときに使います。").c_str()
-    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_TRAINPCT, L"YOLO GUI", L"Trainに割り当てるデータの割合を%で指定してください。\r\nふつうは80です。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_TRAINPCT, L"YOLO GUI", L"Trainに割り当てるデータの割合を%で指定してください。\r\nふつうは80です。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_REDUCTION, L"YOLO GUI", L"使うデータの割合を係数で指定してください。\r\n分からなければ1.0を指定してください。\r\n大きなデータセットのテストなどでデータを減らしたいときに使います。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_REDUCTION, L"YOLO GUI", L"使うデータの割合を係数で指定してください。\r\n分からなければ1.0を指定してください。\r\n大きなデータセットのテストなどでデータを減らしたいときに使います。");
 
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_SPLIT_SHUFFLE,
         L"YOLO GUI",
@@ -187,24 +185,39 @@ void SetTootips(HWND hDlg, Tooltip& ttTmpDir)
             L"デフォルトでは規則な順番で分割します。").c_str()
     );
 
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_WEIGHTS,
-        L"YOLO GUI",
-        std::wstring(L"初期ネットワークモデルファイル(*.pt)を指定します。 \r\n"
-            L"Yolov5の場合はcfg.yamlとモデルが一致するようにいしてください。\r\n"
-            L"Yolov8/11の場合は、ここで指定されたネットワークモデルと同じ構成のモデルになります。").c_str()
-    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_WEIGHTS, L"YOLO GUI", L"初期ネットワークモデルファイル(*.pt)を指定します。\r\nYolov5の場合はcfg.yamlとモデルが一致するようにいしてください。\r\nYolov8/11の場合は、ここで指定されたネットワークモデルと同じ構成のモデルになります。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_WEIGHTS, L"YOLO GUI", L"初期ネットワークモデルファイル(*.pt)を指定します。\r\nYolov5の場合はcfg.yamlとモデルが一致するようにいしてください。\r\nYolov8/11の場合は、ここで指定されたネットワークモデルと同じ構成のモデルになります。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_ACTIVATE, L"YOLO GUI", L"トレインに使用するpython環境名を指定します。 \r\nanaconda、minicondaに対応します。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_ACTIVATE, L"YOLO GUI", L"トレインに使用するpython環境名を指定します。 \r\nanaconda、minicondaに対応します。");
 
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_ACTIVATE,
-        L"YOLO GUI",
-        std::wstring(L"トレインに使用するpython環境名を指定します。 \r\n"
-            L"anaconda、minicondaに対応します。").c_str()
-    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_NAME, L"YOLO GUI", L"トレインの名前を指定します。 \r\nこの名前のフォルダの下にトレーニング結果が保存されます。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_NAME, L"YOLO GUI", L"トレインの名前を指定します。 \r\nこの名前のフォルダの下にトレーニング結果が保存されます。");
 
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_NAME,
-        L"YOLO GUI",
-        std::wstring(L"トレインのプロジェクト名を指定します。 \r\n"
-            L"このプロジェクト名のフォルダの下にトレーニング結果が保存されます。").c_str()
-    );
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_EDIT_PROJECT, L"YOLO GUI", L"トレインのプロジェクト名を指定します。 \r\nこのプロジェクト名のフォルダの下にトレーニング結果が保存されます。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PROJECT, L"YOLO GUI", L"トレインのプロジェクト名を指定します。 \r\nこのプロジェクト名のフォルダの下にトレーニング結果が保存されます。");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_EPOCHS, L"YOLO GUI", L"エポック数(トレーニング回数)を指定します。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_EPOCHS, L"YOLO GUI", L"エポック数(トレーニング回数)を指定します。");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_BATCH,        L"YOLO GUI", L"バッチサイズを指定します。\r\n参考値\r\n16GB yolo11s batch=14\r\n24GB yolo11s batch=22\r\n32GB yolo11s batch=28");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_BATCHSIZE,  L"YOLO GUI", L"バッチサイズを指定します。\r\n参考値\r\n16GB yolo11s batch=14\r\n24GB yolo11s batch=22\r\n32GB yolo11s batch=28");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PATIENCE, L"YOLO GUI", L"自動終了のときの判断回数です。\r\nこの値の回数の範囲で上昇が見られないとき終了します。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_PATIENCE, L"YOLO GUI", L"自動終了のときの判断回数です。\r\nこの値の回数の範囲で上昇が見られないとき終了します。");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_IMGZ, L"YOLO GUI", L"学習で使うイメージサイズを指定します。\r\n通常は640、ラージサイズは1280。\r\nyolov8以降の場合、その他の任意の値も設定出来ますが、使用するときに設定が必要です。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_IMGSZ, L"YOLO GUI", L"学習で使うイメージサイズを指定します。\r\n通常は640、ラージサイズは1280。\r\nyolov以降常の場合、その他の任意の値も設定出来ますが、使用するときに設定が必要です。");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_DEVICE, L"YOLO GUI", L"学習で使うGPUの番号を指定します。\r\n通常は0を指定します。複数枚のGPUがあるときはnvidia-smiで調べてください。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_DEVICE, L"YOLO GUI", L"学習で使うGPUの番号を指定します。\r\n通常は0を指定します。複数枚のGPUがあるときはnvidia-smiで調べてください。");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHECK_RESUME, L"YOLO GUI", L"中断した学習を再開します。\r\n途中まで実施したptファイルをしてしてください。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_RESUME, L"YOLO GUI", L"中断した学習を再開します。\r\n途中まで実施したptファイルをしてしてください。");
+
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_OPTION_STR, L"YOLO GUI", L"オプションをマニュアルで指定します。\r\n詳細は https://docs.ultralytics.com/ja/modes/train/#train-settings を参照。");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_OPTION_STR, L"YOLO GUI", L"オプションをマニュアルで指定します。\r\n詳細は https://docs.ultralytics.com/ja/modes/train/#train-settings を参照。");
+
+
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_EXIST_OK,
         L"YOLO GUI",
         std::wstring(L"トレインの結果は上書きされないように自動敵に連番が付与されますが、 \r\n"

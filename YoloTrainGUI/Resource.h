@@ -54,6 +54,19 @@
 #define IDC_CHK_OPTION_STR              1076
 #define IDC_RADIO2                      1078
 #define IDC_CHECK1                      1079
+#define IDC_STC_FOLDER_IMAGE            1081
+#define IDC_STC_FOLDER_LABEL            1082
+#define IDC_STC_TRAINPCT                1083
+#define IDC_STC_REDUCTION               1084
+#define IDC_STC_WEIGHTS                 1085
+#define IDC_STC_ACTIVATE                1086
+#define IDC_STC_EPOCHS                  1087
+#define IDC_STC_PATIENCE                1088
+#define IDC_STC_BATCH                   1089
+#define IDC_STC_IMGZ                    1090
+#define IDC_STC_DEVICE                  1091
+#define IDC_STC_NAME                    1092
+#define IDC_STC_PROJECT                 1093
 #define IDD_COPY_MULTI                  1200
 #define IDC_PROGRESS_COPY               1201
 #define IDC_BTN_COPY_TO_TEMP            1202
@@ -278,7 +291,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1081
+#define _APS_NEXT_CONTROL_VALUE         1094
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
