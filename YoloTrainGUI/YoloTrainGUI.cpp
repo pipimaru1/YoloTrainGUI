@@ -1869,6 +1869,16 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                     AppendLog(RET);
                     LaunchWithCapture(cmd);
                 } break;
+
+                case IDC_BTN_VIEW_NSMI:
+                {
+                    std::wstring cmd = L"nvidia-smi";
+                    AppendLog(L"[ENV] " + cmd);
+                    AppendLog(RET);
+                    LaunchWithCapture(cmd);
+                } break;
+
+
                 //TempDirのディレクトリの下にあるディレクトリ、ファイル消去する。
                 case IDC_BTN_CLEARTMP:
                 {

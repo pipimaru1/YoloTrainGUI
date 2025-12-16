@@ -199,8 +199,55 @@ void SetTootips(HWND hDlg, Tooltip& ttTmpDir)
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_EPOCHS, L"YOLO GUI", L"エポック数(トレーニング回数)を指定します。");
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_EPOCHS, L"YOLO GUI", L"エポック数(トレーニング回数)を指定します。");
 
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_BATCH,        L"YOLO GUI", L"バッチサイズを指定します。\r\n参考値\r\n16GB yolo11s batch=14\r\n24GB yolo11s batch=22\r\n32GB yolo11s batch=28");
-    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_BATCHSIZE,  L"YOLO GUI", L"バッチサイズを指定します。\r\n参考値\r\n16GB yolo11s batch=14\r\n24GB yolo11s batch=22\r\n32GB yolo11s batch=28");
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_BATCH, L"YOLO GUI", L"バッチサイズを指定します。\r\n"
+        L"参考値\r\n"
+        L"640 x 640 Sモデル\r\n"
+        L"12GB yolos batch=44\r\n"
+        L"16GB yolos batch=46\r\n"
+        L"24GB yolos batch=88\r\n"
+        L"32GB yolos batch=112\r\n"
+        L"640 x 640 Xモデル\r\n"
+        L"12GB yolox batch=8\r\n"
+        L"16GB yolox batch=12\r\n"
+        L"24GB yolox batch=24\r\n"
+        L"32GB yolox batch=36\r\n"
+        L"1280 x 1280 Sモデル\r\n"
+        L"12GB yolo11s batch=10\r\n"
+        L"16GB yolo11s batch=14\r\n"
+        L"24GB yolo11s batch=22\r\n"
+        L"32GB yolo11s batch=28\r\n"
+        L"1280 x 1280 Xモデル\r\n"
+        L"12GB yolo11x batch=2\r\n"
+        L"16GB yolo11x batch=3\r\n"
+        L"24GB yolo11x batch=6\r\n"
+        L"32GB yolo11x batch=9\r\n"
+        L"※ バッチサイズは4,5回エポックを回して、GPUメモリをオーバーしていないか確認してください。\r\n"
+        L"※ 初回エポックは数%大きめのメモリを使用します。2回目以降のGPUメモリ使用量を参考にしてください。"
+    );
+        ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_BATCHSIZE,  L"YOLO GUI", L"バッチサイズを指定します。\r\n参考値\r\n"
+        L"640 x 640 Sモデル\r\n"
+        L"12GB yolos batch=44\r\n"
+        L"16GB yolos batch=46\r\n"
+        L"24GB yolos batch=88\r\n"
+        L"32GB yolos batch=112\r\n"
+        L"640 x 640 Xモデル\r\n"
+        L"12GB yolox batch=8\r\n"
+        L"16GB yolox batch=12\r\n"
+        L"24GB yolox batch=24\r\n"
+        L"32GB yolox batch=36\r\n"
+        L"1280 x 1280 Sモデル\r\n"
+        L"12GB yolo11s batch=10\r\n"
+        L"16GB yolo11s batch=14\r\n"
+        L"24GB yolo11s batch=22\r\n"
+        L"32GB yolo11s batch=28\r\n"
+        L"1280 x 1280 Xモデル\r\n"
+        L"12GB yolo11x batch=2\r\n"
+        L"16GB yolo11x batch=3\r\n"
+        L"24GB yolo11x batch=6\r\n"
+            L"32GB yolo11x batch=9\r\n"
+            L"※ バッチサイズは4,5回エポックを回して、GPUメモリをオーバーしていないか確認してください。\r\n"
+            L"※ 初回エポックは数%大きめのメモリを使用します。2回目以降のGPUメモリ使用量を参考にしてください。"
+        );
 
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_STC_PATIENCE, L"YOLO GUI", L"自動終了のときの判断回数です。\r\nこの値の回数の範囲で上昇が見られないとき終了します。");
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CMB_PATIENCE, L"YOLO GUI", L"自動終了のときの判断回数です。\r\nこの値の回数の範囲で上昇が見られないとき終了します。");
@@ -217,6 +264,9 @@ void SetTootips(HWND hDlg, Tooltip& ttTmpDir)
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_OPTION_STR, L"YOLO GUI", L"オプションをマニュアルで指定します。\r\n詳細は https://docs.ultralytics.com/ja/modes/train/#train-settings を参照。");
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_COMBO_OPTION_STR, L"YOLO GUI", L"オプションをマニュアルで指定します。\r\n詳細は https://docs.ultralytics.com/ja/modes/train/#train-settings を参照。");
 
+    ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_BTN_VIEW_NSMI, L"YOLO GUI", L"NIVIDIA-SMIでGPU情報を表示します。");
+
+    
 
     ttTmpDir.AddHoverTooltipForCtrl(hDlg, IDC_CHK_EXIST_OK,
         L"YOLO GUI",

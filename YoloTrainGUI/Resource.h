@@ -258,6 +258,8 @@
 #define IDC_RAD_YOLO11                  1818
 #define IDC_GRP_YOLOVERSION             1819
 #define IDC_RADIO_SEGMENT               1820
+#define IDC_BTN_VIEW_PYENV2             1820
+#define IDC_BTN_VIEW_NSMI               1820
 #define IDC_RADIO_POSE                  1821
 #define IDC_RADIO_CLASSIFY              1822
 #define IDC_STC_CFG                     1823
