@@ -762,6 +762,23 @@ bool PickFolderEx3(HWND hDlg, UINT comboID, std::wstring title, std::wstring sec
     return false;
 }
 
+//////////////////////////////////////
+//
+// MRU 保存・読み込みユーティリティ
+// ここに書くのかが適切かどうかは不明
+// 
+//////////////////////////////////////
+int LoadIntFromIni(const wchar_t* key, int defValue)
+{
+    auto v = LoadMRU(key);
+    if (v.empty()) return defValue;
+    try {
+        return std::stoi(v.front());
+    }
+    catch (...) {
+        return defValue;
+    }
+}
 //上記関数のラッパー さらに MRU 保存も行う版
 //bool PickFolderEx(HWND hDlg, UINT _ComboID, std::wstring _title, const wchar_t* _SECSTR)
 //{

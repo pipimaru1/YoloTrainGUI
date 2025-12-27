@@ -526,11 +526,11 @@ INT_PTR CALLBACK CopyMultiDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 {
 					if (HIWORD(wParam) != BN_CLICKED) //ボタンがクリックされた場合のみ処理
                         return TRUE;
-                    AppendLog(L"[TEMP] Clear requested."); AppendLog(RET);
+                    AppendLog(L"[TEMP] Clear requested."); AppendLog(gRET);
                     DoClearTemp(hDlg, IDC_COMBO_TEMP_MCOPY, true, false);
                     UpdateFolderCounter_Train(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_TRAIN);
                     UpdateFolderCounter_Valid(hDlg, IDC_COMBO_TEMP_MCOPY, IDC_STATIC_TMP_VALID);
-                    AppendLog(L"[TEMP] Clear request done."); AppendLog(RET);
+                    AppendLog(L"[TEMP] Clear request done."); AppendLog(gRET);
                     return TRUE;
 
                 } break; //IDC_BTN_CLEARTMP

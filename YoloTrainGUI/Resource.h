@@ -44,6 +44,7 @@
 #define IDC_COMBO_NAME                  1045
 #define IDC_EDIT_PROJECT                1046
 #define IDC_COMBO_NAME2                 1047
+#define IDC_COMBO_DEVICE2               1048
 #define IDC_BTN_TRAIN                   1050
 #define IDC_BTN_STOP                    1051
 #define IDC_PROGRESS                    1060
@@ -286,6 +287,7 @@
 #define IDC_RADIO_SPLITUNIT_20          1853
 #define IDC_RADIO_SPLITUNIT_50          1854
 #define IDC_RADIO_SPLITUNIT_100         1855
+#define IDC_CMB_RETURN_MODE_RICHEDIT    1900
 
 // Next default values for new objects
 // 

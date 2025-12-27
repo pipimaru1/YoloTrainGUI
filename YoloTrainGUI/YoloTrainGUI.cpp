@@ -28,7 +28,7 @@ static HANDLE g_hJob = NULL;  // ← 追加
 std::mutex g_logMutex;
 std::wstring g_logBuffer;
 
-const wchar_t *RET = L"\r\n";
+const wchar_t* gRET = L"\r\n";
 static TOOLINFOW g_TipTI{};
 static bool      bTmpTipShow = false;
 
@@ -55,13 +55,13 @@ static bool CopyTreeWithProgress(const fs::path& src, const fs::path& dst)
 {
     if (!fs::exists(src)) { 
         AppendLog(L"[COPY] Source not found: " + src.wstring()); 
-        AppendLog(RET);
+        AppendLog(gRET);
         return false; 
     }
     uint64_t total = CountFiles(src);
     if (!EnsureDir(dst)) { 
         AppendLog(L"[COPY] Cannot create: " + dst.wstring()); 
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
     uint64_t done = 0;
@@ -102,11 +102,11 @@ static inline void NotifyProgressPercent(int v) {
 static bool CopyTreeWithProgress_omp(const fs::path& src, const fs::path& dst)
 {
     if (!fs::exists(src)) {
-        AppendLog(L"[COPY] Source not found: " + src.wstring()); AppendLog(RET);
+        AppendLog(L"[COPY] Source not found: " + src.wstring()); AppendLog(gRET);
         return false;
     }
     if (!EnsureDir(dst)) {
-        AppendLog(L"[COPY] Cannot create: " + dst.wstring()); AppendLog(RET);
+        AppendLog(L"[COPY] Cannot create: " + dst.wstring()); AppendLog(gRET);
         return false;
     }
 
@@ -199,7 +199,7 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_laun
         //if (!ok) {
         //    CloseHandle(hRead);
         //    AppendLog(L"[EXEC] Failed to start: " + cmdLineFull);
-        //    AppendLog(RET);
+        //    AppendLog(gRET);
         //    return nullptr;
         //}
         CloseHandle(pi.hThread);
@@ -210,9 +210,9 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_laun
     if (!ok) {
         CloseHandle(hRead);
         //AppendLog(L"[EXEC] Failed to start: " + cmdLineFull);
-        //AppendLog(RET);
+        //AppendLog(gRET);
         PostLogToUi(L"[EXEC] Failed to start: " + cmdLineFull);
-        PostLogToUi(RET);
+        PostLogToUi(gRET);
         return nullptr;
     }
 
@@ -255,9 +255,9 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_laun
         WaitForSingleObject(piH, INFINITE);
         DWORD ec = 0; GetExitCodeProcess(piH, &ec);
         //AppendLog(L"[EXEC] Exit code: " + std::to_wstring(ec));
-        //AppendLog(RET);
+        //AppendLog(gRET);
         PostLogToUi(L"[EXEC] Exit code: " + std::to_wstring(ec));
-        PostLogToUi(RET);
+        PostLogToUi(gRET);
 
         }).detach();
 
@@ -272,7 +272,7 @@ static HANDLE LaunchWithCapture(const std::wstring& cmdLineFull, bool _only_laun
 //        TerminateProcess(h, 1);
 //        CloseHandle(h);
 //        AppendLog(L"[EXEC] Terminated.");
-//        AppendLog(RET);
+//        AppendLog(gRET);
 //    }
 //}
 static void StopChild()
@@ -362,13 +362,13 @@ static void AddSafeDirectory(const std::wstring& dir)
         CloseHandle(pi.hProcess);
         //MessageBoxW(NULL, L"safe.directory に追加しました。", L"Git設定", MB_OK | MB_ICONINFORMATION);
 		AppendLog(L"[GIT] safe.directory に追加しました。");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
     else
     {
         //MessageBoxW(NULL, L"git の実行に失敗しました。PATH設定を確認してください。", L"Git設定", MB_OK | MB_ICONERROR);
 		AppendLog(L"[GIT] git の実行に失敗しました。PATH設定を確認してください。");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
 }
 
@@ -461,12 +461,12 @@ void DoClearTemp(HWND hOwner,const UINT _ID_COMBO_TEMP, bool confirm, bool keepR
         //std::wstring tempDir = GetText(hOwner, IDC_COMBO_TEMP);
         std::wstring tempDir = GetText(hOwner, _ID_COMBO_TEMP);
         if (tempDir.empty()) {
-            AppendLog(L"[TEMP] Temp directory is not set."); AppendLog(RET);
+            AppendLog(L"[TEMP] Temp directory is not set."); AppendLog(gRET);
             g_clearTempRunning = false; return;
         }
         fs::path tempPath(tempDir);
         if (!fs::exists(tempPath)) {
-            AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring()); AppendLog(RET);
+            AppendLog(L"[TEMP] Temp directory does not exist: " + tempPath.wstring()); AppendLog(gRET);
             g_clearTempRunning = false; return;
         }
 
@@ -476,7 +476,7 @@ void DoClearTemp(HWND hOwner,const UINT _ID_COMBO_TEMP, bool confirm, bool keepR
                 L"Confirm",
                 MB_OKCANCEL | MB_ICONWARNING);
             if (r != IDOK) {
-                AppendLog(L"[TEMP] Clear operation cancelled."); AppendLog(RET);
+                AppendLog(L"[TEMP] Clear operation cancelled."); AppendLog(gRET);
                 g_clearTempRunning = false; return;
             }
         }
@@ -499,12 +499,12 @@ void DoClearTemp(HWND hOwner,const UINT _ID_COMBO_TEMP, bool confirm, bool keepR
 
         setProgress(100);
         AppendLog(L"[TEMP] Cleared temp directory: " + tempPath.wstring());
-        AppendLog(RET);
+        AppendLog(gRET);
     }
     catch (const fs::filesystem_error& e) {
         std::wstring msg = FromUTF8(e.what());
         AppendLog(L"[TEMP] Error clearing temp directory: " + msg);
-        AppendLog(RET);
+        AppendLog(gRET);
     }
 
     g_clearTempRunning = false;
@@ -651,7 +651,7 @@ void TrainParams::DoTrain_old()
 
     if (workdir.empty() || trainpy.empty() || datayaml.empty()) {
         AppendLog(L"[TRAIN] workdir/train.py/data.yaml is required.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
 
@@ -699,7 +699,7 @@ void TrainParams::DoTrain_old()
 
     std::wstring command = ss.str();
     AppendLog(L"[TRAIN] " + command);
-    AppendLog(RET);
+    AppendLog(gRET);
 
     //ここでコマンドを実行
     LaunchWithCapture(command);
@@ -737,12 +737,12 @@ void TrainParams::DoTrain()
     // 共通必須チェック
     if (datayaml.empty()) {
         AppendLog(L"[TRAIN] data.yaml is required.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
     if (workdir.empty()) {
         AppendLog(L"[TRAIN] workdir is required.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
 
@@ -772,7 +772,7 @@ void TrainParams::DoTrain()
         // --- 従来どおり：train.py を直接呼ぶ ---
         if (trainpy.empty()) {
             AppendLog(L"[TRAIN] train.py path/name is required for YOLOv5.");
-            AppendLog(RET);
+            AppendLog(gRET);
             return;
         }
         ss << Quote(python) << L" " << Quote(trainpy)
@@ -813,7 +813,7 @@ void TrainParams::DoTrain()
         // model は UI の「weights」欄を流用（yolov8n.pt / yolo11n.pt / 任意パス）
         if (weights.empty()) {
             AppendLog(L"[TRAIN] model (.pt) is recommended for YOLOv8/YOLO11 (set in Weights field).");
-            AppendLog(RET);
+            AppendLog(gRET);
         }
 
         // 既定は "python -m ultralytics"。yolo コマンドが PATH にあるなら差し替えたい場合はここで検出して置換も可。
@@ -846,7 +846,7 @@ void TrainParams::DoTrain()
 
     const std::wstring command = ss.str();
     AppendLog(L"[TRAIN] " + command);
-    AppendLog(RET);
+    AppendLog(gRET);
 
     // 実行（既存の外部プロセス起動＋標準出力をRichEditに反映）
     LaunchWithCapture(command);                  // 進捗・ANSI対応のログ表示あり
@@ -865,7 +865,7 @@ static void DoCopyToTemp_old()
     if (img.empty() || lab.empty() || tmp.empty())
     {
         AppendLog(L"[COPY] Missing path.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
 
@@ -878,51 +878,51 @@ static void DoCopyToTemp_old()
         {
             fs::remove_all(dstImages);
 			AppendLog(L"[COPY] Removed previous images: " + dstImages.wstring());
-            AppendLog(RET);
+            AppendLog(gRET);
         }
         if (fs::exists(dstLabels))
         {
             fs::remove_all(dstLabels);
 			AppendLog(L"[COPY] Removed previous labels: " + dstLabels.wstring());
-            AppendLog(RET);
+            AppendLog(gRET);
         }
     }
     catch (...) {}
 
     ResetProgress();
     AppendLog(L"[COPY] images -> " + dstImages.wstring());
-    AppendLog(RET);
+    AppendLog(gRET);
 
     //並列版
     if (CopyTreeWithProgress_omp(img, dstImages))
     {
         AppendLog(L"[COPY] Images Completed.");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
     else
     {
         AppendLog(L"[COPY] Images Not Completed.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
   
     AppendLog(L"[COPY] labels -> " + dstLabels.wstring());
-    AppendLog(RET);
+    AppendLog(gRET);
     if (CopyTreeWithProgress_omp(lab, dstLabels))
     {
         AppendLog(L"[COPY] Labels Completed.");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
 	else
     {
         AppendLog(L"[COPY] Labels Not Completed.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
 
     SetProgress(100);
     AppendLog(L"[COPY] Completed.");
-    AppendLog(RET);
+    AppendLog(gRET);
     SaveMRU(L"Image Data", img);
     SaveMRU(L"Label Data", lab);
     SaveMRU(L"Temp Dir", tmp);
@@ -937,18 +937,18 @@ static bool CopyOnlyLabeled_omp(
 {
     if (!fs::exists(srcImagesRoot)) {
         AppendLog(L"[COPY] Image source not found: " + srcImagesRoot.wstring());
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
     if (!fs::exists(srcLabelsRoot)) {
         AppendLog(L"[COPY] Label source not found: " + srcLabelsRoot.wstring());
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
 
     if (!EnsureDir(dstImagesRoot) || !EnsureDir(dstLabelsRoot)) {
         AppendLog(L"[COPY] Cannot create dst root.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
 
@@ -1004,7 +1004,7 @@ static bool CopyOnlyLabeled_omp(
 
     if (pairs.empty()) {
         AppendLog(L"[COPY] No labeled images found.");
-        AppendLog(RET);
+        AppendLog(gRET);
         NotifyProgressPercent(0);
         return true; // データが無いだけなのでエラーではない扱いにする
     }
@@ -1034,7 +1034,7 @@ static bool CopyOnlyLabeled_omp(
 
     NotifyProgressPercent(100);
     AppendLog(L"[COPY] Labeled images copied: " + std::to_wstring(pairs.size()));
-    AppendLog(RET);
+    AppendLog(gRET);
     return true;
 }
 //////////////////////////////////////////////////////////////////////////
@@ -1057,7 +1057,7 @@ static void DoCopyToTemp(bool only_with_label /*= false*/)
     if (img.empty() || lab.empty() || tmp.empty())
     {
         AppendLog(L"[COPY] Missing path.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
 
@@ -1069,12 +1069,12 @@ static void DoCopyToTemp(bool only_with_label /*= false*/)
         if (fs::exists(dstImages)) {
             fs::remove_all(dstImages);
             AppendLog(L"[COPY] Removed previous images: " + dstImages.wstring());
-            AppendLog(RET);
+            AppendLog(gRET);
         }
         if (fs::exists(dstLabels)) {
             fs::remove_all(dstLabels);
             AppendLog(L"[COPY] Removed previous labels: " + dstLabels.wstring());
-            AppendLog(RET);
+            AppendLog(gRET);
         }
     }
     catch (...) {}
@@ -1085,44 +1085,44 @@ static void DoCopyToTemp(bool only_with_label /*= false*/)
     {
         // ==== 従来通り: 全部コピー ====
         AppendLog(L"[COPY] (all files) images -> " + dstImages.wstring());
-        AppendLog(RET);
+        AppendLog(gRET);
 
         if (!CopyTreeWithProgress_omp(img, dstImages)) {
             AppendLog(L"[COPY] Images Not Completed.");
-            AppendLog(RET);
+            AppendLog(gRET);
             return;
         }
         AppendLog(L"[COPY] Images Completed.");
-        AppendLog(RET);
+        AppendLog(gRET);
 
         AppendLog(L"[COPY] (all files) labels -> " + dstLabels.wstring());
-        AppendLog(RET);
+        AppendLog(gRET);
 
         if (!CopyTreeWithProgress_omp(lab, dstLabels)) {
             AppendLog(L"[COPY] Labels Not Completed.");
-            AppendLog(RET);
+            AppendLog(gRET);
             return;
         }
         AppendLog(L"[COPY] Labels Completed.");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
     else
     {
         // ==== 新モード: label のある画像だけコピー ====
         AppendLog(L"[COPY] (only labeled) images/labels -> "
             + (fs::path(tmp) / "source").wstring());
-        AppendLog(RET);
+        AppendLog(gRET);
 
         if (!CopyOnlyLabeled_omp(img, lab, dstImages, dstLabels)) {
             AppendLog(L"[COPY] Labeled copy Not Completed.");
-            AppendLog(RET);
+            AppendLog(gRET);
             return;
         }
     }
 
     SetProgress(100);
     AppendLog(L"[COPY] Completed.");
-    AppendLog(RET);
+    AppendLog(gRET);
 
     SaveMRU(L"Image Data", img);
     SaveMRU(L"Label Data", lab);
@@ -1146,7 +1146,7 @@ static void DoSplit()
     float reduc = _wtof(GetText(g_hDlg, IDC_EDIT_REDUCTION).c_str());
     if (tmp.empty() || trainPct <= 0) {
         AppendLog(L"[SPLIT] Missing temp or train%");
-        AppendLog(RET);
+        AppendLog(gRET);
         return;
     }
 
@@ -1160,7 +1160,7 @@ static void DoSplit()
     catch (...) {}
     ResetProgress();
     AppendLog(L"[SPLIT] source=" + src.wstring() + L"   dest=" + dst.wstring());
-    AppendLog(RET);
+    AppendLog(gRET);
     SplitDataset(src, dst, trainPct, reduc, _is_shuffle, splitunit);   // based on your divfiles.cpp  :contentReference[oaicite:2]{index=2}
     SetProgress(100);
 }
@@ -1272,6 +1272,8 @@ int TrainParams::SaveCurrentSettingsToIni(HWND hDlg)
         SaveMRU(L"proxy_https", GetText(hDlg, IDC_CMB_PROXY_HTTPS));
 	    chkUseProxy = (IsDlgButtonChecked(hDlg, IDC_CHK_USEPROXY) == BST_CHECKED);
         SaveMRU(L"chkUseProxy", chkUseProxy ? L"1" : L"0");
+
+        SaveMRU(L"RichEditReturnMode", std::to_wstring(_RETRUN_MODE));
     }
 /*
     else // hDlgが無効な場合は、メモリ上の共有データの設定を保存
@@ -1535,6 +1537,21 @@ static void InitDialog(HWND hDlg)
     // チェックボックス設定の後、関連するコントロールをグレーアウトしたりする
     Updated_UI(hDlg);
 
+    // --- RichEdit 改行モード ---
+    // 不要と思う
+    HWND hEol = GetDlgItem(hDlg, IDC_CMB_RETURN_MODE_RICHEDIT);
+    if (hEol)
+    {
+        SendMessageW(hEol, CB_RESETCONTENT, 0, 0);
+        SendMessageW(hEol, CB_ADDSTRING, 0, (LPARAM)L"LF (\\n)");
+        SendMessageW(hEol, CB_ADDSTRING, 0, (LPARAM)L"CR (\\r)");
+        SendMessageW(hEol, CB_ADDSTRING, 0, (LPARAM)L"CRLF (\\r\\n)");
+
+        _RETRUN_MODE = LoadIntFromIni(L"RichEditReturnMode", 2); // ini から
+
+        SendMessageW(hEol, CB_SETCURSEL, (WPARAM)_RETRUN_MODE, 0);
+    }
+
     // ボタンのツールチップを設定
     INITCOMMONCONTROLSEX icc{ sizeof(icc), ICC_WIN95_CLASSES };
     InitCommonControlsEx(&icc);
@@ -1564,14 +1581,14 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
     //UnquoteInPlace(path);
     if (path.empty()) {
         AppendLog(L"[OPEN] data.yaml path is empty.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
 
     // 存在チェック（存在しなくても ShellExecute は投げられるが、ユーザに優しく）
     if (!fs::exists(path)) {
         AppendLog(L"[OPEN] File not found: " + path);
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
 
@@ -1589,12 +1606,12 @@ static bool OpenFileWithDefaultEditor(const std::wstring& filePathRaw)
         // 代表的なエラー値を簡単に表示
         std::wstringstream ss;
         ss << L"[OPEN] ShellExecute failed (" << code << L") : " << path;
-        AppendLog(RET);
+        AppendLog(gRET);
         AppendLog(ss.str());
         return false;
     }
     AppendLog(L"[OPEN] Launched editor for: " + path);
-    AppendLog(RET);
+    AppendLog(gRET);
     return true;
 }
 
@@ -1635,7 +1652,7 @@ void StartTensorBoardDetached_old(const std::wstring& logdir, const std::wstring
             {
             RUNNING_TENSORBOARD = false;
             AppendLog(L"[TENSORBOARD] CreateProcess failed.");
-            AppendLog(RET);
+            AppendLog(gRET);
 		}
     }
 }
@@ -1680,19 +1697,19 @@ void StartTensorBoardDetached(const std::wstring& logdir,
     );
     AppendLog(L"[TENSORBOARD] ");
     AppendLog(buf.data());
-    AppendLog(RET);
+    AppendLog(gRET);
 
     if (ok) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
         RUNNING_TENSORBOARD = true;
         AppendLog(L"[TENSORBOARD] launched. Open http://127.0.0.1:" + std::to_wstring(port) + L"/");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
     else {
         RUNNING_TENSORBOARD = false;
         AppendLog(L"[TENSORBOARD] CreateProcess failed.");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
 }
 
@@ -1717,7 +1734,7 @@ static bool OpenURLWithDefaultBrowser(const std::wstring& url)
 
     if (link.empty()) {
         AppendLog(L"[OPEN] URL is empty.");
-        AppendLog(RET);
+        AppendLog(gRET);
         return false;
     }
     // "http://" などのスキームがない場合は "https://" を付与してみる
@@ -1730,12 +1747,12 @@ static bool OpenURLWithDefaultBrowser(const std::wstring& url)
         // 代表的なエラー値を簡単に表示
         std::wstringstream ss;
         ss << L"[OPEN] ShellExecute failed (" << code << L") : " << link;
-        AppendLog(RET);
+        AppendLog(gRET);
         AppendLog(ss.str());
         return false;
     }
     AppendLog(L"[OPEN] Launched browser for: " + link);
-    AppendLog(RET);
+    AppendLog(gRET);
     return true;
 }
 
@@ -1788,6 +1805,24 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                     }
                     return TRUE;
                 }
+                case IDC_CMB_RETURN_MODE_RICHEDIT:
+                {
+                    if (HIWORD(wParam) == CBN_SELCHANGE)
+                    {
+                        //LogAppendANSI( const std::wstring& s)の判定を直したら直ったので
+                        //不要だと思う 将来コンボボックスで何かを切り替えるときに使えるので残す
+                        HWND hEol = (HWND)lParam;
+                        int sel = (int)SendMessageW(hEol, CB_GETCURSEL, 0, 0);
+                        if(sel==0)
+                            _RETRUN_MODE = 0; // LF
+                        else if (sel == 1)
+                            _RETRUN_MODE = 1; // CR
+                        else
+							_RETRUN_MODE = 2; // CRLF
+                    }
+                }
+
+                break;
 
                 case IDC_BTN_BROWSE_IMG: 
 					PickFolderEx2(hDlg, IDC_COMBO_IMG, L"Original IMAGE Directory");
@@ -1866,7 +1901,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 {
                     std::wstring cmd = L"conda info --envs";
                     AppendLog(L"[ENV] " + cmd);
-                    AppendLog(RET);
+                    AppendLog(gRET);
                     LaunchWithCapture(cmd);
                 } break;
 
@@ -1874,7 +1909,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                 {
                     std::wstring cmd = L"nvidia-smi";
                     AppendLog(L"[ENV] " + cmd);
-                    AppendLog(RET);
+                    AppendLog(gRET);
                     LaunchWithCapture(cmd);
                 } break;
 
@@ -1969,12 +2004,12 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                     std::wstring script = GetText(hDlg, IDC_COMBO_ACTIVATE);
                     if (python.empty() || script.empty()) {
                         AppendLog(L"[CHKCRLF] Python or activate script is not set.");
-                        AppendLog(RET);
+                        AppendLog(gRET);
                         return TRUE;
                     }
                     std::wstring cmd = L"activate " + script + +L" && "+ python + L" chk_crlf.py";
                     AppendLog(L"[CHKCRLF] " + cmd);
-                    AppendLog(RET);
+                    AppendLog(gRET);
 					LaunchWithCapture(cmd);
 				}break;
 
@@ -2020,7 +2055,7 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                         if (tempDir.empty() || yamlPathW.empty()) {
                             //MessageBoxW(hDlg, L"TEMPまたはYAMLパスが空です。", L"エラー", MB_ICONERROR);
                             AppendLog(L"[YAML] TEMP or YAML path is empty.");
-                            AppendLog(RET);
+                            AppendLog(gRET);
                             break;
                         }
 
@@ -2035,13 +2070,13 @@ static INT_PTR CALLBACK DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPara
                         if (ok) {
                             //MessageBoxW(hDlg, log.c_str(), L"YAML更新", MB_ICONINFORMATION);
                             AppendLog(L"[YAML] Updated YAML: " + yamlPathW);
-                            AppendLog(RET);
+                            AppendLog(gRET);
                             // AppendToRichEdit(log); // 既存のログ関数があれば
                         }
                         else {
                             //MessageBoxW(hDlg, log.c_str(), L"YAML更新失敗", MB_ICONERROR);
                             AppendLog(L"[YAML] Failed to update YAML: " + yamlPathW);
-                            AppendLog(RET);
+                            AppendLog(gRET);
                         }
                     }
                 }break;

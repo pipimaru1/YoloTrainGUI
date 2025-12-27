@@ -12,7 +12,7 @@ extern HWND g_hDlg;
 extern std::atomic<HANDLE> g_hChildProc;
 extern std::mutex g_logMutex;
 extern std::wstring g_logBuffer;
-extern const wchar_t* RET;
+extern const wchar_t* gRET;
 extern bool _IDC_CHK_LOG_CRLF2LF;// = false;
 extern std::mutex g_storeMutex;
 
@@ -30,9 +30,15 @@ extern const UINT IDC_STC_VALID_SRC[MAXDIR];
 extern Tooltip _ToolTipMainDlg; // グローバルなツールチップオブジェクト
 extern Tooltip _ToolTipMultiCpDlg; // グローバルなツールチップオブジェクト
 
-//
+// RichEdit関連
+//_return_mode
+// 0 : \n
+// 1 : \r
+// 2 : \r\n
 void LogAppendANSI(const std::wstring& s);
 void AppendLog(const std::wstring& s);
+extern int _RETRUN_MODE;        // 0:LF 1:CR 2:CRLF
+
 
 // ------------------------------
 // Utilities
@@ -63,6 +69,9 @@ std::map<std::wstring, std::vector<std::wstring>> ReadIniColon();
 void WriteIniColon(const std::map<std::wstring, std::vector<std::wstring>>& data);
 void ClearMRUSection(const std::wstring& section); // MRU（履歴）を「セクションごと消す」関数を追加
 void ClearComboUI(HWND hCombo);                    // コンボボックスをクリアするユーティリティ 
+
+//　汎用かな
+int LoadIntFromIni(const wchar_t* key, int defValue);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // richieditboxの不具合対応

@@ -3,7 +3,16 @@
 
 #include "YoloTrainGUI.h"
 
+bool _IDC_CHK_LOG_CRLF2LF = false;
+//static LONG g_curLineStartCp = 0;   // 最後の改行直後（論理行先頭）
+//static bool g_pendingCR = false;    // CR が来たが CRLF か単体 CR か未確定
+int _RETRUN_MODE = 2;           // 0:LF 1:CR 2:CRLF
+//const wchar_t* rRET = L"\r\n";   // 既存の const wchar_t* RET があるなら置き換え
 
+/// <summary>
+/// //////////////
+/// </summary>
+/// <param name="s"></param>
 void AppendLog(const std::wstring& s)
 {
     if (0)
@@ -21,7 +30,6 @@ void AppendLog(const std::wstring& s)
     else
         LogAppendANSI(s);
 }
-
 
 // ANSI色の状態
 struct AnsiState {
@@ -81,6 +89,28 @@ static void RichReplaceLastLine(HWND hRe, const std::wstring& w, const AnsiState
     SendMessageW(hRe, EM_EXSETSEL, 0, (LPARAM)&cr);
     SendMessageW(hRe, EM_SCROLLCARET, 0, 0);
 }
+/*
+static void RichReplaceCurrentLogicalLine(HWND hRe, const std::wstring& w, const AnsiState& st)
+{
+    LRESULT end = SendMessageW(hRe, WM_GETTEXTLENGTH, 0, 0);
+    if (g_curLineStartCp < 0) g_curLineStartCp = 0;
+    if (g_curLineStartCp > end) g_curLineStartCp = (LONG)end;
+
+    CHARRANGE cr{ g_curLineStartCp, (LONG)end };
+    SendMessageW(hRe, EM_EXSETSEL, 0, (LPARAM)&cr);
+
+    SendMessageW(hRe, EM_SETREADONLY, FALSE, 0);
+    SetSelFormat(hRe, st);
+    SendMessageW(hRe, EM_REPLACESEL, FALSE, (LPARAM)w.c_str());
+    SendMessageW(hRe, EM_SETREADONLY, TRUE, 0);
+
+    // caret を末尾へ
+    end = SendMessageW(hRe, WM_GETTEXTLENGTH, 0, 0);
+    cr.cpMin = cr.cpMax = (LONG)end;
+    SendMessageW(hRe, EM_EXSETSEL, 0, (LPARAM)&cr);
+    SendMessageW(hRe, EM_SCROLLCARET, 0, 0);
+}
+*/
 
 // ANSIカラーコード（SGR）の整数 -> COLORREF
 static COLORREF AnsiColor(int code)
@@ -134,10 +164,27 @@ static void TrimOldLines(HWND hRe, int maxLines = MAXLINES_RICHEDIT, int hystere
     SendMessageW(hRe, EM_SCROLLCARET, 0, 0);
 }
 
-bool _IDC_CHK_LOG_CRLF2LF = false;
-//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// 
+// 改行挿入ヘルパ（挿入後に g_curLineStartCp を更新）
+// 
+//////////////////////////////////////////////////////////////
+/*
+static void RichAppendNewLine(HWND hRe, const AnsiState& st)
+{
+    RichAppend(hRe, L"\r\n", st); // または L"\r"
+    g_curLineStartCp = (LONG)SendMessageW(hRe, WM_GETTEXTLENGTH, 0, 0);
+}
+*/
+//////////////////////////////////////////////////////////////
+// 
 // ANSIエスケープを解釈して RichEdit に吐く
-void LogAppendANSI(const std::wstring& s)
+// _return_mode
+// 0 : \n
+// 1 : \r
+// 2 : \r\n
+//////////////////////////////////////////////////////////////
+void LogAppendANSI( const std::wstring& s)
 {
     HWND hRe = GetDlgItem(g_hDlg, IDC_LOG);
     if (!hRe || s.empty()) return;
@@ -147,9 +194,12 @@ void LogAppendANSI(const std::wstring& s)
     bool crMode = false; // 直前に '\r' が来たら true（次の出力で最終行を置換）
 
     auto flush = [&](bool replace) {
-        if (chunk.empty()) return;
-        if (replace) RichReplaceLastLine(hRe, chunk, st);
-        else         RichAppend(hRe, chunk, st);
+        if (chunk.empty()) 
+            return;
+        if (replace) 
+            RichReplaceLastLine(hRe, chunk, st);
+        else         
+            RichAppend(hRe, chunk, st);
 
         // ★ここで古い行を落とす（上限 10000 行）
         TrimOldLines(hRe, MAXLINES_RICHEDIT, 200);
@@ -159,8 +209,16 @@ void LogAppendANSI(const std::wstring& s)
 
     for (size_t i = 0; i < s.size(); ++i)
     {
-        wchar_t c = s[i];
-        if (c == L'\x1b') {
+        wchar_t c0 = s[i];
+
+        wchar_t c1;
+        if (i < s.size())
+            c1= s[i + 1];
+        else
+			c1 = L'\0';
+
+
+        if (c0 == L'\x1b') {
             // 直前の文字列を出力
             flush(crMode); crMode = false;
 
@@ -216,47 +274,108 @@ void LogAppendANSI(const std::wstring& s)
             continue;
         }
 #else
-        if (c == L'\r') {
+        if (c0 == L'\r' && c1 != L'\n')
+        {
             // いままでの内容で"上書き"確定
-            flush(true);               // ★ここを常に置換で出すのがポイント
-            crMode = true;             // 次の文字列も"置換対象"として扱う
-            // 直後が LF なら CRLF → 改行確定として扱う（置換ではない）
-            if (i + 1 < s.size() && s[i + 1] == L'\n') 
-            {
-                if(_IDC_CHK_LOG_CRLF2LF)
-                {
-                    RichReplaceLastLine(hRe, L"", st); // 空行に置換（CRLFをLFに変換）
-                    crMode = false;
-                    ++i;                    // LF を消費
-                }
-                else
-                {
-                    // 改行を append で確定（空行を作らないため chunk は使わない）
-                    RichAppend(hRe, L"\n", st);
-                    crMode = false;
-                    ++i;                    // LF を消費
-                }
-            }
+            flush(false);                       // 上書きするのでフラッシュする必要ない
+            RichReplaceLastLine(hRe, L"", st);  // 空行に置換（CRLFをLFに変換）
             continue;
         }
-        if (c == L'\n') {
-            // 「次に入ってくる可視テキストを最終行に置換する」フラグだけ立てる
-            // ここでは出力しない（断片化による余分な改行を防ぐ）
-            crMode = true;
-            // もし直後が LF なら「本物の改行」なので確定させる
-            if (i + 1 < s.size() && s[i + 1] == L'\n') {
-                // 直前までのチャンクを通常出力
-                flush(false);              // append（\rフラグはここでクリア）
+        //以下の処理は要らないのかもしれない
+        else if (c0 == L'\r' && c1 == L'\n') 
+        {
+            //リターン
+            flush(true);                   
+            // ★ここを常に置換で出すのがポイント
+            // 改行を append で確定（空行を作らないため chunk は使わない）
+            if (_RETRUN_MODE == 0)
                 RichAppend(hRe, L"\n", st);
-                crMode = false;
-                ++i; // LF を消費
-            }
+            else if (_RETRUN_MODE == 1)
+                RichAppend(hRe, L"\r", st);
+            else // (_return_mode == 2)
+                RichAppend(hRe, L"\r\n", st);
+            crMode = false;
+            ++i;                            // LF を消費
+            continue;
+		}
+        if (c0 == L'\n') {
+            // 直前までのチャンクを通常出力
+            flush(true);
+            //flush(false);              // append（\rフラグはここでクリア）
+            if (_RETRUN_MODE == 0)
+                RichAppend(hRe, L"\n", st);
+            else if (_RETRUN_MODE == 1)
+                RichAppend(hRe, L"\r", st);
+            else // (_return_mode == 2)
+                RichAppend(hRe, L"\r\n", st);
+            //++i; // LF を消費
             continue;
         }
 #endif
 
-        chunk.push_back(c);
+        chunk.push_back(c0);
     }
     flush(crMode);
 }
 
+/*
+///////////////////////////////////////////////////////////////
+//　改行対策版 しかしだめ
+void LogAppendANSI_test(
+    const std::wstring& s,
+    int _return_mode
+)
+{
+    HWND hRe = GetDlgItem(g_hDlg, IDC_LOG);
+    if (!hRe || s.empty()) return;
+
+    AnsiState st;
+    std::wstring chunk;
+    bool crMode = false; // 直前に '\r' が来たら true（次の出力で最終行を置換）
+
+    bool replaceMode = false; // 次 flush で置換するか
+
+    auto flush = [&]() {
+        if (chunk.empty()) return;
+        if (replaceMode) RichReplaceCurrentLogicalLine(hRe, chunk, st);
+        else             RichAppend(hRe, chunk, st);
+        chunk.clear();
+        };
+
+
+    for (size_t i = 0; i < s.size(); ++i) {
+        wchar_t c = s[i];
+
+        // 前回末尾が \r だった（CRLF か単体CRか未確定）
+        if (g_pendingCR) {
+            if (c == L'\n') {
+                // CRLF確定 → 改行
+                flush();
+                RichAppendNewLine(hRe, st);
+                g_pendingCR = false;
+                replaceMode = false;
+                continue;
+            }
+            else {
+                // 単体CR → 上書きモード
+                g_pendingCR = false;
+                replaceMode = true;
+            }
+        }
+
+        if (c == L'\r') {
+            flush();
+            g_pendingCR = true;  // 次文字で CRLF か判定
+            continue;
+        }
+        if (c == L'\n') {
+            flush();
+            RichAppendNewLine(hRe, st);
+            replaceMode = false;
+            continue;
+        }
+        chunk.push_back(c);
+    }
+    flush();
+}
+*/

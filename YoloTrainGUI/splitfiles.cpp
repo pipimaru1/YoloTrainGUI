@@ -44,7 +44,7 @@ void SplitDataset(
         std::random_device rd; std::mt19937 g(rd());
         std::shuffle(jpgFiles.begin(), jpgFiles.end(), g);
 		AppendLog(L"[SPLIT] Shuffled dataset.");
-        AppendLog(RET);
+        AppendLog(gRET);
     }
 
 	// reduction データの間引き(0.001～1.0)
@@ -59,7 +59,7 @@ void SplitDataset(
         AppendLog(L"[SPLIT] Reduced dataset: total=" + std::to_wstring(total) +
             L" used=" + std::to_wstring(used) +
 			L" factor=" + std::to_wstring(reductionFactor));
-        AppendLog(RET);
+        AppendLog(gRET);
     }
 
     // train count
@@ -98,7 +98,7 @@ void SplitDataset(
             L" used=" + std::to_wstring(used) +
             L" train=" + std::to_wstring(nTrain) +
             L" valid=" + std::to_wstring(used - nTrain));
-        AppendLog(RET);
+        AppendLog(gRET);
     }
     else //誤差蓄積法でファイルをN個おきに分ける splitunit単位
     {
@@ -169,20 +169,20 @@ void SplitDataset(
         }
         AppendLog(L"[SPLIT] Done. total=" + std::to_wstring(total) +
             L" used=" + std::to_wstring(used));
-        AppendLog(RET);
+        AppendLog(gRET);
 
         AppendLog(L"[SPLIT] Done. Cpied total=" + std::to_wstring(
             count_train_image + count_valid_image + count_train_label + count_valid_label
         ));
-        AppendLog(RET);
+        AppendLog(gRET);
 
-        AppendLog(L" train_image=" + std::to_wstring(count_train_image) + RET);
-        AppendLog(L" train_label=" + std::to_wstring(count_train_label) + RET);
-        AppendLog(L" valid_image=" + std::to_wstring(count_valid_image) + RET);
-        AppendLog(L" valid_label=" + std::to_wstring(count_valid_label) + RET);
+        AppendLog(L" train_image=" + std::to_wstring(count_train_image) + gRET);
+        AppendLog(L" train_label=" + std::to_wstring(count_train_label) + gRET);
+        AppendLog(L" valid_image=" + std::to_wstring(count_valid_image) + gRET);
+        AppendLog(L" valid_label=" + std::to_wstring(count_valid_label) + gRET);
 
 		float actualTrainPct = count_train_image/(float)(count_train_image + count_valid_image) * 100.0f;
-		AppendLog(L"[SPLIT] Actual train%=" + std::to_wstring(actualTrainPct) + L" %"+RET);
+		AppendLog(L"[SPLIT] Actual train%=" + std::to_wstring(actualTrainPct) + L" %"+gRET);
     }
 
     /*
