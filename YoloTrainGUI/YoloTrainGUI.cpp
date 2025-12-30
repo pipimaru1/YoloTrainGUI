@@ -807,7 +807,7 @@ void TrainParams::DoTrain()
     else
     {
         // TensorBoard 自動起動設定（YOLOv8/11のみ有効）
-        ss << L"yolo settings tensorboard = True" << L" && ";
+        ss << L"yolo settings tensorboard=True" << L" && ";
 
         // --- YOLOv8 / YOLO11：Ultralytics CLI を使用 ---
         // model は UI の「weights」欄を流用（yolov8n.pt / yolo11n.pt / 任意パス）
@@ -1570,6 +1570,11 @@ static void InitDialog(HWND hDlg)
         g_logWidth = g_logInit.right - g_logInit.left;
         g_logHeight = g_logInit.bottom - g_logInit.top;
     }
+
+    // ダイアログボックスのキャプションを変更
+    // ビルドした日付を入れる
+	std::wstring caption = L"YOLOv5 Trainer GUI - Build=[ " __DATE__ L" " __TIME__ L" ]";
+    SetWindowTextW(hDlg, caption.c_str());
 }
 
 // 既定アプリで開く（“open” 動詞）
