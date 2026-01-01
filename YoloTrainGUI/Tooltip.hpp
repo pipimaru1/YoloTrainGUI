@@ -62,3 +62,17 @@ public:
     }
 };
 
+//使い方
+// ① ツールチップインスタンスを作成
+// 変数として 例 Tooltip _TP 等を宣言
+// グローバル変数として宣言しておくのを推奨
+// ダイアログボックス、ウィンドウ毎にインスタンスを作成する
+// ウィンドウ毎にイベントが発生するため
+// 
+// ② ダイアログ初期化時に EnsureTooltip(hDlg) を呼ぶ
+// 例 _TP.EnsureTooltip(hDlg);
+//
+// ③ 各コントロールにツールチップを追加
+// 例 _TP.AddHoverTooltipForCtrl(hDlg, IDC_BUTTON1, L"Button1", L"このボタンは…");
+//
+// ④ ダイアログの WM_DESTROY で hnd_ToolTip を破棄
