@@ -1377,6 +1377,22 @@ static void ShowFirstListItem(HWND hList)
     SendMessageW(hList, LB_SETTOPINDEX, 0, 0);
 }
 
+static void EnableComboEditAutoHScroll(HWND hCombo)
+{
+    COMBOBOXINFO cbi{};
+    cbi.cbSize = sizeof(cbi);
+    if (!GetComboBoxInfo(hCombo, &cbi)) return;
+
+    // cbi.hwndItem が Edit 部分（CBS_DROPDOWN/CBS_SIMPLE の場合）
+    if (!cbi.hwndItem) return;
+
+    LONG_PTR style = GetWindowLongPtr(cbi.hwndItem, GWL_STYLE);
+    style |= ES_AUTOHSCROLL;
+    SetWindowLongPtr(cbi.hwndItem, GWL_STYLE, style);
+
+    SetWindowPos(cbi.hwndItem, nullptr, 0, 0, 0, 0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+}
 
 // ------------------------------
 static void InitDialog(HWND hDlg)
@@ -1414,9 +1430,12 @@ static void InitDialog(HWND hDlg)
     opts &= ~IMF_DUALFONT; // ← このビットだけ落として…
     SendMessageW(hLog, EM_SETLANGOPTIONS, 0, opts); // ← 全体を“上書き”で戻す
 
-    
     SendDlgItemMessageW(hDlg, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
     ResetProgress();
+
+    HWND hCombo = GetDlgItem(hDlg, IDC_COMBO_OPTION_STR);
+    SendMessage(hCombo, CB_LIMITTEXT, 8192, 0);
+    //EnableComboEditAutoHScroll(hCombo);
 
 	// 設定ファイルから読み込んでコンボにセット
     LoadMRUToCombo(GetDlgItem(hDlg, IDC_COMBO_IMG), L"Image Data");
