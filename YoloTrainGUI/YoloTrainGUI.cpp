@@ -1592,7 +1592,7 @@ static void InitDialog(HWND hDlg)
 
     // ダイアログボックスのキャプションを変更
     // ビルドした日付を入れる
-	std::wstring caption = L"YOLOv5 Trainer GUI - Build=[ " __DATE__ L" " __TIME__ L" ]";
+	std::wstring caption = L"YOLO Trainer GUI - Build=[ " __DATE__ L" " __TIME__ L" ]";
     SetWindowTextW(hDlg, caption.c_str());
 }
 
