@@ -1,4 +1,5 @@
 # YoloTrainGUI 説明書
+<img width="742" height="996" alt="image" src="https://github.com/user-attachments/assets/36c639d7-2995-4e8d-8ac1-11e6860c39b8" />
 
 YoloTrainGUI は、YOLO 系モデルの学習作業を支援する Windows GUI アプリケーションです。  
 C++ / Win32 API で作成されており、アプリ自身が学習処理を実装するのではなく、外部の YOLOv5 系 `train.py` を Python で起動します。
