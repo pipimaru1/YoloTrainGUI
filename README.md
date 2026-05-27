@@ -345,6 +345,7 @@ static fs::path GetIniFile()
 ---
 
 ## 6. 画面項目
+<img width="739" height="998" alt="image" src="https://github.com/user-attachments/assets/9a237311-da58-4ce4-b6a2-3bcf530108e5" />
 
 ### 6.1 データ準備エリア
 
